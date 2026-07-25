@@ -1,13 +1,13 @@
-package com.dibya.knowledgehub.knowledgehub_ai;
+package com.dibya.knowledgehub;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class KnowledgehubAiApplication {
+public class KnowledgeHubApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(KnowledgehubAiApplication.class, args);
+		SpringApplication.run(KnowledgeHubApplication.class, args);
 	}
 
 }

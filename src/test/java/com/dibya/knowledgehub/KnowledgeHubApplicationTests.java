@@ -1,10 +1,10 @@
-package com.dibya.knowledgehub.knowledgehub_ai;
+package com.dibya.knowledgehub;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class KnowledgehubAiApplicationTests {
+class KnowledgeHubApplicationTests {
 
 	@Test
 	void contextLoads() {
