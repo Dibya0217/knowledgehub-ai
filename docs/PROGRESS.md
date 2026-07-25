@@ -5,10 +5,15 @@
 
 ---
 
-## 2026-07-25 — Project Scaffold + Phase 1 Dependencies
+## 2026-07-25 — Project Scaffold + Phase 1 Dependencies + Monorepo Restructure
 
 ### Done
 - Initialized Spring Boot 4.1.0 + Java 25 project at repo root
+- Moved Spring Boot source into `backend/` subfolder (monorepo layout: `backend/` + `frontend/` as siblings)
+  - Moved: `src/`, `pom.xml`, `mvnw`, `mvnw.cmd`, `.mvn/`, `HELP.md` → `backend/`
+  - Updated `.gitignore`: `target/` → `backend/target/`
+  - Updated `docs/PLAN.md` repo structure diagram
+- Switched `application.properties` → `application.yml` (better for deeply nested config)
 - Created full repository structure:
   - `frontend/`, `docker/{postgres,redis,qdrant,prometheus,grafana}/`
   - `.github/workflows/`, `scripts/`
