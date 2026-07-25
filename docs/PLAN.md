@@ -4,7 +4,7 @@
 
 Portfolio project demonstrating enterprise-grade Java GenAI backend skills.
 Target roles: Java GenAI backend engineer.
-**Current state:** Spring Boot 4.1.0 + Java 25 initialized at repo root (not in `backend/` subfolder).
+**Current state:** Spring Boot 4.1.0 + Java 25 lives in `backend/` subfolder. Frontend will be in `frontend/` (Phase 6).
 **Time budget:** 1–1.5 hrs/day weekdays, 2–4 hrs/day weekends (~12 hrs/week).
 **Estimated completion:** ~13 weeks from start.
 
@@ -87,7 +87,11 @@ app:
 
 ```
 knowledgehub-ai/
-├── src/                          ← Spring Boot app (already here)
+├── backend/                      ← Spring Boot app
+│   ├── src/
+│   ├── pom.xml
+│   ├── mvnw
+│   └── .mvn/
 ├── frontend/                     ← React app (Phase 6)
 ├── docs/
 │   ├── PLAN.md                   ← this file
