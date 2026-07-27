@@ -1,3 +1,73 @@
 spring:
   application:
     name: knowledgehub-ai
+  profiles:
+    active: local
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASS}
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 30000
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASS:}
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 52MB
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+  error:
+    include-message: never
+    include-stacktrace: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: alpha
+    tags-sorter: alpha
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+    access-token-expiry: 900000
+    refresh-token-expiry: 604800000
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
+  ai:
+    provider: ${AI_PROVIDER:ollama}
+    embedding-provider: ${EMBEDDING_PROVIDER:ollama}
+  storage:
+    location: ${STORAGE_PATH:./uploads}

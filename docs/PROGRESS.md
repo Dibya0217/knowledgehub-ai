@@ -50,4 +50,39 @@
 
 ---
 
+## 2026-07-26 — Phase 1 Foundation Layer (Week 1 Tasks 2–7)
+
+### Done
+- Added `logstash-logback-encoder:8.0` to `pom.xml` for JSON logging
+- Created `application.yml` (base config — env vars, no secrets), `application-local.yml` (local dev defaults), `application-dev.yml` (dev/staging), `application-prod.yml` (production)
+- Created `logback-spring.xml` — colored human-readable output for local/dev, JSON format (Logstash) for prod, MDC `correlationId` field in all logs
+- Created `CorrelationIdFilter` — reads/generates `X-Correlation-ID`, sets MDC, echoes header in response
+- Created `ApiResponse<T>` — success wrapper with `success`, `message`, `data`, `correlationId`, `timestamp`
+- Created `PagedResponse<T>` — pagination wrapper with `from(Page<T>)` factory
+- Created `ErrorResponse` — RFC 7807 Problem Details (`type`, `title`, `status`, `detail`, `instance`, `correlationId`, `timestamp`, `errors`)
+- Created custom exceptions: `ResourceNotFoundException`, `ConflictException`, `UnauthorizedException`, `ForbiddenException`, `BadRequestException`, `ValidationException`, `StorageException`, `AiProviderException`
+- Created `GlobalExceptionHandler` (`@RestControllerAdvice`) — handles all exception types, no stack traces in responses
+- Created `docker-compose.yml` — PostgreSQL 16, Redis 7, Qdrant (latest) with healthchecks and named volumes
+- Created `.env.example` — documents all required env vars
+
+### Decisions
+- `application-local.yml` disables Flyway (`flyway.enabled: false`) — no migrations exist yet, avoids startup failure
+- Logback uses Spring profile conditions — no manual env var needed
+- `ErrorResponse` is a custom POJO (not Spring's `ProblemDetail`) for full control over serialization
+- `CorrelationIdFilter` placed in `common/filter/` package (infrastructure concern, not security)
+
+### Verification
+- `./mvnw compile` — PASS (Lombok/Java 25 warnings only, no errors)
+
+### Blockers
+- None
+
+### Next Session (Phase 1 — Week 2)
+- `AppConfig` — virtual threads executor, async config, Jackson config
+- OpenAPI / Swagger config — Swagger UI at `/swagger-ui.html`
+- Flyway setup — `V1__create_users_roles.sql` migration
+- `RequestLoggingFilter` — log method, path, status, duration
+
+---
+
 <!-- Add new entries above this line, newest first -->
