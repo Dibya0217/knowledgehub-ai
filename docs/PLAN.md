@@ -358,13 +358,13 @@ GET    /actuator/prometheus
 
 | Day | Type | Task |
 |-----|------|------|
-| 1 Mon | WD | Restructure pom.xml — add missing deps (Flyway, MapStruct, Tika, OpenAPI, Resilience4j, JWT, Redis) |
-| 2 Tue | WD | Create `application.yml`, `application-local.yml`, `application-dev.yml`, `application-prod.yml` profiles |
-| 3 Wed | WD | Setup Logback (`logback-spring.xml`) — JSON logs + correlation ID MDC filter |
-| 4 Thu | WD | Create `ApiResponse<T>` wrapper, `PagedResponse<T>`, `ErrorResponse` (RFC 7807 Problem Details) |
-| 5 Fri | WD | `GlobalExceptionHandler` — handle validation, not found, unauthorized, generic 500 |
-| 6 Sat | WE | Custom exception classes (`ResourceNotFoundException`, `ConflictException`, `UnauthorizedException`, etc.) |
-| 7 Sun | WE | `docker-compose.yml` — PostgreSQL + Redis + Qdrant containers. Verify app connects |
+| 1 Mon | WD | ✅ Restructure pom.xml — add missing deps (Flyway, MapStruct, Tika, OpenAPI, Resilience4j, JWT, Redis) |
+| 2 Tue | WD | ✅ Create `application.yml`, `application-local.yml`, `application-dev.yml`, `application-prod.yml` profiles |
+| 3 Wed | WD | ✅ Setup Logback (`logback-spring.xml`) — JSON logs + correlation ID MDC filter |
+| 4 Thu | WD | ✅ Create `ApiResponse<T>` wrapper, `PagedResponse<T>`, `ErrorResponse` (RFC 7807 Problem Details) |
+| 5 Fri | WD | ✅ `GlobalExceptionHandler` — handle validation, not found, unauthorized, generic 500 |
+| 6 Sat | WE | ✅ Custom exception classes (`ResourceNotFoundException`, `ConflictException`, `UnauthorizedException`, etc.) |
+| 7 Sun | WE | ✅ `docker-compose.yml` — PostgreSQL + Redis + Qdrant containers. Verify app connects |
 
 #### Week 2
 
