@@ -160,4 +160,43 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 
 ---
 
+## 2026-07-30 — Phase 2 Week 4: User Profile, OAuth2, Rate Limiting, Password Reset
+
+### Done
+- **UserController** — `GET /api/v1/users/me` returns full user profile (id, email, name, provider, emailVerified, createdAt, roles)
+- **UserProfileResponse** DTO + **UpdateProfileRequest** DTO
+- **UserService** — `getCurrentUser()` loads from `SecurityContextHolder`
+- **OAuth2SuccessHandler** — issues JWT on Google OAuth2 callback, creates user if first login
+- **RateLimitFilter** — rate limits login attempts via Resilience4j
+- **ForgotPasswordRequest** + **ResetPasswordRequest** DTOs (password reset flow)
+- **CorsConfig** — explicit CORS bean
+- **SecurityConfig** — added `exceptionHandling` with custom `AuthenticationEntryPoint` returning JSON 401 instead of redirecting to Google OAuth page
+
+### Bug Fixed
+- `GET /api/v1/users/me` was returning Google OAuth HTML redirect instead of 401 for unauthenticated requests — missing `authenticationEntryPoint` in `SecurityConfig`
+
+### Decisions
+- `AuthenticationEntryPoint` returns `{"success":false,"message":"Unauthorized"}` with 401 status — no redirect for API clients
+
+### Verification
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"test@test.com","password":"password123"}' \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['accessToken'])")
+
+curl http://localhost:8080/api/v1/users/me -H "Authorization: Bearer $TOKEN"
+# Returns: id, email, name, provider, emailVerified, createdAt, roles
+```
+
+### Blockers
+- None
+
+### Next Session (Phase 2 — Week 4 continued)
+- `PUT /api/v1/users/me` — update profile
+- Forgot/reset password endpoints (OTP via Redis)
+- Email verification flow
+
+---
+
 <!-- Add new entries above this line, newest first -->
