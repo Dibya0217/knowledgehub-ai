@@ -5,7 +5,7 @@ spring:
     password: knowledgehub
   jpa:
     hibernate:
-      ddl-auto: none
+      ddl-auto: update
     show-sql: true
     properties:
       hibernate:
@@ -16,7 +16,7 @@ spring:
       port: 6379
       password: ""
   flyway:
-    enabled: true
+    enabled: false
 
 management:
   endpoint:
@@ -32,7 +32,7 @@ logging:
 
 app:
   jwt:
-    secret: local-dev-secret-min-32-chars-long-replace-in-prod
+    secret: bG9jYWwtZGV2LXNlY3JldC1taW4tMzItY2hhcnMtbG9uZy1yZXBsYWNlLWluLXByb2Q=
   cors:
     allowed-origins: http://localhost:5173
   ai:
