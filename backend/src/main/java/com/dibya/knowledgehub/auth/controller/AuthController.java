@@ -1,9 +1,13 @@
 package com.dibya.knowledgehub.auth.controller;
 
 import com.dibya.knowledgehub.auth.dto.AuthResponse;
+import com.dibya.knowledgehub.auth.dto.ForgotPasswordRequest;
 import com.dibya.knowledgehub.auth.dto.LoginRequest;
 import com.dibya.knowledgehub.auth.dto.RefreshRequest;
 import com.dibya.knowledgehub.auth.dto.RegisterRequest;
+import com.dibya.knowledgehub.auth.dto.ResetPasswordRequest;
+import com.dibya.knowledgehub.auth.dto.SendVerificationRequest;
+import com.dibya.knowledgehub.auth.dto.VerifyEmailRequest;
 import com.dibya.knowledgehub.auth.service.AuthService;
 import com.dibya.knowledgehub.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -55,5 +59,33 @@ public class AuthController {
         String token = authHeader.substring(7);
         authService.logout(token, userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.ok("Logged out successfully"));
+    }
+
+    @PostMapping("/forgot-password")
+    @Operation(summary = "Request password reset OTP")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest req) {
+        authService.forgotPassword(req);
+        return ResponseEntity.ok(ApiResponse.ok("If that email exists, a reset code was sent"));
+    }
+
+    @PostMapping("/reset-password")
+    @Operation(summary = "Reset password using OTP")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest req) {
+        authService.resetPassword(req);
+        return ResponseEntity.ok(ApiResponse.ok("Password reset successfully"));
+    }
+
+    @PostMapping("/send-verification")
+    @Operation(summary = "Send email verification OTP")
+    public ResponseEntity<ApiResponse<Void>> sendVerification(@Valid @RequestBody SendVerificationRequest req) {
+        authService.sendVerification(req);
+        return ResponseEntity.ok(ApiResponse.ok("Verification code sent if account exists and is unverified"));
+    }
+
+    @PostMapping("/verify-email")
+    @Operation(summary = "Verify email using OTP")
+    public ResponseEntity<ApiResponse<Void>> verifyEmail(@Valid @RequestBody VerifyEmailRequest req) {
+        authService.verifyEmail(req);
+        return ResponseEntity.ok(ApiResponse.ok("Email verified successfully"));
     }
 }
