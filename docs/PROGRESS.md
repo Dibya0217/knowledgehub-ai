@@ -199,4 +199,75 @@ curl http://localhost:8080/api/v1/users/me -H "Authorization: Bearer $TOKEN"
 
 ---
 
+## 2026-07-31 — Phase 3 Week 5: Document Entities, Storage, Parsers
+
+### Done
+- **V4__create_documents.sql** — `documents` + `document_metadata` tables
+- **Document** JPA entity + **DocumentMetadata** JPA entity + **DocumentStatus** enum (`PENDING/PROCESSING/READY/FAILED`)
+- **DocumentRepository** (`findByUser`, `findByIdAndUser`, `findByUserAndStatus`) + **DocumentMetadataRepository**
+- **FileStorageService** interface + **LocalFileStorageService** — saves to `uploads/{userId}/{documentId}/` (S3-ready via interface swap)
+- **DocumentParser** interface + **ParsedDocument** record
+- 8 parsers: `PdfParser` (PDFBox), `DocxParser` (POI), `TxtParser`, `CsvParser` (commons-csv), `ExcelParser` (POI), `JsonParser` (Jackson), `MarkdownParser`, `TikaFallbackParser`
+- **ParserFactory** — Tika MIME auto-detection → selects correct parser
+- Added `commons-csv 1.12.0` to pom.xml
+
+### Decisions
+- File content stored on disk (not DB) — DB holds path pointer only; `FileStorageService` interface allows S3 swap in Phase 8 with zero controller/service changes
+- Chunks deferred to Week 6 (no DB table for chunks — goes to Qdrant in Phase 4)
+
+### Verification
+- `./mvnw compile` — PASS
+
+### Blockers
+- None
+
+### Next Session (Phase 3 — Week 6)
+- `TextChunk` + `ChunkingService`
+- `DocumentController` + `DocumentService` (async upload pipeline)
+- `GET/DELETE /api/v1/documents` endpoints
+
+---
+
+## 2026-07-31 — Phase 3 Week 6: Document Service, Upload API, Chunking Pipeline
+
+### Done
+- **TextChunk** record + **ChunkingService** — recursive character splitter (size=800, overlap=150), splits on `\n\n` → `\n` → `". "` → `" "` → hard split
+- **DTOs**: `DocumentResponse`, `DocumentStatusResponse`, `DocumentUploadResponse`
+- **DocumentController** — 5 endpoints: `POST /upload`, `GET /`, `GET /{id}`, `GET /{id}/status`, `DELETE /{id}`
+- **DocumentService** — sync upload creates DB record + stores file, fires `@Async processDocumentAsync()`: `PENDING → PROCESSING → parse → chunk → save metadata → READY` (or `FAILED`)
+- Upload validation: max 50MB, MIME whitelist (PDF, DOCX, XLSX, XLS, CSV, JSON, TXT, MD)
+- Delete removes DB record + file from disk
+
+### Decisions
+- `MultipartFile` consumed after first read — store file first, then re-read from disk for async parsing
+- Chunks held in memory this week — Qdrant persistence wired in Phase 4 (Week 7)
+
+### Verification
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"test@test.com","password":"password123"}' \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['accessToken'])")
+
+# Upload
+curl -X POST http://localhost:8080/api/v1/documents/upload \
+  -H "Authorization: Bearer $TOKEN" -F "file=@test.pdf"
+
+# Poll status (PENDING → PROCESSING → READY)
+curl http://localhost:8080/api/v1/documents/{id}/status \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Blockers
+- None
+
+### Next Session (Phase 4 — Week 7)
+- Spring AI BOM + OpenAI/Gemini/Ollama dependencies
+- `AiProviderConfig` — conditional beans per `app.ai.provider`
+- Qdrant `VectorStoreConfig`
+- `EmbeddingService` + `VectorStoreService`
+- Wire chunks → embed → upsert to Qdrant
+
+---
+
 <!-- Add new entries above this line, newest first -->
