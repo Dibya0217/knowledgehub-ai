@@ -118,4 +118,46 @@
 
 ---
 
+## 2026-07-30 — Phase 2 Week 3 (Days 15–21): Full JWT Authentication
+
+### Done
+- **Day 15** — `User` JPA entity (maps `users` table, ManyToMany roles, `@PreUpdate` for `updatedAt`), `Role` JPA entity
+- **Day 16** — `UserRepository` (`findByEmail`, `existsByEmail`), `RoleRepository` (`findByName`), `UserDetailsServiceImpl` (loads by email, maps roles to `GrantedAuthority`), `PasswordEncoder` bean (BCrypt) added to `AppConfig`
+- **Day 17** — `JwtService`: `generateAccessToken`, `generateRefreshToken`, `extractEmail`, `isTokenValid`, `isTokenExpired`, `getExpiryMillis` using jjwt 0.12.6
+- **Day 18** — `JwtAuthFilter`: reads Bearer header, checks Redis blacklist, validates token, sets `SecurityContextHolder`
+- **Day 19** — `SecurityConfig` updated: added `JwtAuthFilter`, `DaoAuthenticationProvider`, `AuthenticationManager`, `/api/v1/auth/**` permitted
+- **Day 20** — DTOs (`RegisterRequest`, `LoginRequest`, `RefreshRequest`, `AuthResponse`), `AuthService` (register/login/refresh/logout), `AuthController` (4 endpoints)
+- **Day 21** — `V2__create_refresh_tokens.sql`, `RefreshToken` entity + `RefreshTokenRepository`, refresh rotation + Redis JWT blacklist on logout
+- Fixed JWT secret to Base64-encoded value in `application-local.yml`
+
+### Decisions
+- `RegisterRequest`, `LoginRequest`, `RefreshRequest`, `AuthResponse` use Java records (immutable, concise)
+- Refresh token rotation: old token revoked on use, new one issued
+- Logout blacklists access token in Redis with TTL = remaining expiry; revokes all user refresh tokens in DB
+- `JwtAuthFilter` silently ignores invalid tokens (no exception thrown — lets Spring Security return 401)
+
+### Verification
+```bash
+# Register
+curl -X POST http://localhost:8080/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@test.com","name":"Test User","password":"password123"}'
+
+# Login
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@test.com","password":"password123"}'
+```
+
+### Blockers
+- None
+
+### Next Session (Phase 2 — Week 4)
+- `GET /api/v1/users/me` — current user profile endpoint
+- Google OAuth2 callback handler
+- Password reset (OTP via Redis)
+- Rate limiting on login (Resilience4j)
+
+---
+
 <!-- Add new entries above this line, newest first -->
