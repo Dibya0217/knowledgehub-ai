@@ -14,7 +14,7 @@ spring:
       port: 6379
       password: ""
   flyway:
-    enabled: false
+    enabled: true
 
 logging:
   level:

@@ -85,4 +85,37 @@
 
 ---
 
+## 2026-07-30 — Phase 1 Week 2 (Days 8–13): Config, Flyway, OpenAPI, Logging, Audit
+
+### Done
+- **Day 8** — Created `V1__create_users_roles.sql`: tables `users`, `roles`, `user_roles`, `audit_logs`; seeded `ROLE_USER` + `ROLE_ADMIN`; enabled Flyway in `application-local.yml`
+- **Day 9** — Created `AppConfig`: virtual thread executor (`@EnableAsync`), `ObjectMapper` (JavaTimeModule, no date timestamps), `RestClient.Builder` bean
+- **Day 10** — Created `OpenApiConfig`: SpringDoc `OpenAPI` bean with JWT `bearerAuth` security scheme, server entries, contact info
+- **Day 11** — Created `banner.txt` (ASCII art); added `info.app.*` to `application.yml` for `/actuator/info`
+- **Day 12** — Created `RequestLoggingFilter`: logs method, path, status, duration, correlationId, ip on every non-actuator request
+- **Day 13** — Created `AuditLog` JPA entity, `AuditLogRepository`, `AuditService` with `@Async` save; created `README.md` skeleton
+
+### Decisions
+- `RequestLoggingFilter` skips `/actuator/**` to avoid noise
+- `AuditService.log()` is `@Async` — fires-and-forgets using virtual thread executor from `AppConfig`
+- `OpenApiConfig` sets global `bearerAuth` security requirement — all endpoints show lock icon in Swagger UI
+
+### Verification
+- Run `docker compose up -d` then `mvn spring-boot:run -Dspring-boot.run.profiles=local`
+- Flyway runs V1: `\dt` in psql shows 4 tables
+- `GET /actuator/health` → `{"status":"UP"}`
+- `GET /actuator/info` → app metadata
+- `GET /swagger-ui.html` → Swagger UI renders
+- Every request log line includes `correlationId` and `duration`
+
+### Blockers
+- None
+
+### Next Session (Phase 2 — Week 3)
+- User entity + Spring Security config
+- JWT filter + token provider
+- Register / Login endpoints
+
+---
+
 <!-- Add new entries above this line, newest first -->
