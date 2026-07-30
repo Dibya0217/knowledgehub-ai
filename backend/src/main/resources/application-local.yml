@@ -4,6 +4,8 @@ spring:
     username: knowledgehub
     password: knowledgehub
   jpa:
+    hibernate:
+      ddl-auto: none
     show-sql: true
     properties:
       hibernate:
@@ -15,6 +17,11 @@ spring:
       password: ""
   flyway:
     enabled: true
+
+management:
+  endpoint:
+    health:
+      show-details: always
 
 logging:
   level:
