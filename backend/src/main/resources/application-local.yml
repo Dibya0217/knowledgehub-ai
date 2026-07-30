@@ -1,9 +1,11 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/knowledgehub
+    url: jdbc:postgresql://localhost:5433/knowledgehub
     username: knowledgehub
     password: knowledgehub
   jpa:
+    hibernate:
+      ddl-auto: none
     show-sql: true
     properties:
       hibernate:
@@ -14,7 +16,12 @@ spring:
       port: 6379
       password: ""
   flyway:
-    enabled: false
+    enabled: true
+
+management:
+  endpoint:
+    health:
+      show-details: always
 
 logging:
   level:

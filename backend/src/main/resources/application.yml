@@ -50,6 +50,15 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: KnowledgeHub AI
+    version: ${spring.application.version:1.0.0}
+    description: RAG-powered knowledge management and chat platform
 
 springdoc:
   api-docs:
