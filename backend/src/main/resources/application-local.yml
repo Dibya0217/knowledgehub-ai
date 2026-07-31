@@ -1,4 +1,6 @@
 spring:
+  main:
+    allow-bean-definition-overriding: true
   datasource:
     url: jdbc:postgresql://localhost:5433/knowledgehub
     username: knowledgehub
@@ -31,6 +33,18 @@ spring:
             token-uri: https://oauth2.googleapis.com/token
             user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
             user-name-attribute: email
+  ai:
+    model:
+      embedding: ollama
+      chat: ollama
+    ollama:
+      base-url: http://localhost:11434
+    vectorstore:
+      qdrant:
+        host: localhost
+        port: 6334
+        collection-name: knowledge_vectors
+        dimensions: 768
 
 management:
   endpoint:
