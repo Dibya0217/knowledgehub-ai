@@ -11,6 +11,7 @@ import com.dibya.knowledgehub.conversation.repository.ConversationRepository;
 import com.dibya.knowledgehub.conversation.repository.MessageRepository;
 import com.dibya.knowledgehub.exception.ResourceNotFoundException;
 import com.dibya.knowledgehub.llm.LlmService;
+import com.dibya.knowledgehub.llm.TokenEstimator;
 import com.dibya.knowledgehub.memory.ConversationMemoryService;
 import com.dibya.knowledgehub.prompt.PromptBuilder;
 import com.dibya.knowledgehub.rag.RagService;
@@ -43,6 +44,7 @@ public class ChatService {
     private final PromptBuilder promptBuilder;
     private final CitationExtractor citationExtractor;
     private final ConversationMemoryService memoryService;
+    private final TokenEstimator tokenEstimator;
 
     public ChatService(ConversationRepository conversationRepository,
                        MessageRepository messageRepository,
@@ -52,7 +54,8 @@ public class ChatService {
                        LlmService llmService,
                        PromptBuilder promptBuilder,
                        CitationExtractor citationExtractor,
-                       ConversationMemoryService memoryService) {
+                       ConversationMemoryService memoryService,
+                       TokenEstimator tokenEstimator) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
         this.messageCitationRepository = messageCitationRepository;
@@ -62,6 +65,7 @@ public class ChatService {
         this.promptBuilder = promptBuilder;
         this.citationExtractor = citationExtractor;
         this.memoryService = memoryService;
+        this.tokenEstimator = tokenEstimator;
     }
 
     public ChatResponse chat(ChatRequest request, String userEmail) {
@@ -77,9 +81,10 @@ public class ChatService {
         List<Document> chunks = ragService.retrieve(request.question(), user.getId(), 5);
         String context = ragService.buildContext(chunks);
         String systemPrompt = promptBuilder.buildSystem(context);
+        List<Message> trimmedHistory = tokenEstimator.trimHistory(history, context, request.question());
 
         List<org.springframework.ai.chat.messages.Message> nonSystemMessages = promptBuilder
-                .buildMessages(context, history, request.question())
+                .buildMessages(context, trimmedHistory, request.question())
                 .stream()
                 .filter(m -> !(m instanceof org.springframework.ai.chat.messages.SystemMessage))
                 .toList();
@@ -126,9 +131,10 @@ public class ChatService {
         List<Document> chunks = ragService.retrieve(question, user.getId(), 5);
         String context = ragService.buildContext(chunks);
         String systemPrompt = promptBuilder.buildSystem(context);
+        List<Message> trimmedHistory = tokenEstimator.trimHistory(history, context, question);
 
         List<org.springframework.ai.chat.messages.Message> nonSystemMessages = promptBuilder
-                .buildMessages(context, history, question)
+                .buildMessages(context, trimmedHistory, question)
                 .stream()
                 .filter(m -> !(m instanceof org.springframework.ai.chat.messages.SystemMessage))
                 .toList();

@@ -91,6 +91,25 @@ springdoc:
     operations-sorter: alpha
     tags-sorter: alpha
 
+resilience4j:
+  retry:
+    instances:
+      llm:
+        max-attempts: 3
+        wait-duration: 2s
+        retry-exceptions:
+          - org.springframework.web.client.ResourceAccessException
+          - org.springframework.ai.retry.NonTransientAiException
+  circuitbreaker:
+    instances:
+      llm:
+        failure-rate-threshold: 50
+        minimum-number-of-calls: 5
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 2
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+
 app:
   jwt:
     secret: ${JWT_SECRET}

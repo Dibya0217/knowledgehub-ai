@@ -66,6 +66,17 @@ logging:
     org.flywaydb: DEBUG
     org.hibernate.SQL: DEBUG
 
+resilience4j:
+  retry:
+    instances:
+      llm:
+        max-attempts: 1
+  circuitbreaker:
+    instances:
+      llm:
+        wait-duration-in-open-state: 5s
+        minimum-number-of-calls: 3
+
 app:
   jwt:
     secret: bG9jYWwtZGV2LXNlY3JldC1taW4tMzItY2hhcnMtbG9uZy1yZXBsYWNlLWluLXByb2Q=

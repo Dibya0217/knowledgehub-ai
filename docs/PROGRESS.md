@@ -412,4 +412,28 @@ curl http://localhost:8080/api/v1/chat/<uuid>/messages -H "Authorization: Bearer
 
 ---
 
+## 2026-07-31 — Phase 5 Week 10: Token Estimator, Resilience4j, Phase 5 Complete
+
+### Done
+- **Day 67** — `TokenEstimator`: heuristic 1 token ≈ 4 chars; `trimHistory()` trims oldest messages to keep total under 3000 tokens (context + question + history); always retains last 2 messages minimum; wired into `ChatService.chat()` and `ChatService.stream()`
+- **Day 68** — Resilience4j retry (3 attempts, 2s wait) + circuit breaker (50% failure threshold, 30s open wait) on `LlmService.call()` and `LlmService.stream()`; fallback returns graceful message instead of 500; `GlobalExceptionHandler` handles `CallNotPermittedException` → 503; local override: 1 retry attempt, 5s CB wait
+- **Day 70** — Phase 5 backend MVP complete: all chat endpoints functional end-to-end
+
+### Decisions
+- `resilience4j-spring-boot3` was already in pom.xml but unconfigured — added YAML config only
+- Fallback annotation order: `@Retry` outer, `@CircuitBreaker` inner — retry fires first, CB tracks failure rate
+- Token limit 3000 set conservatively (llama3.2 has 131k ctx but keeps local inference fast)
+- `CallNotPermittedException` caught at controller level (GlobalExceptionHandler) since fallback returns 200 with message, not exception
+
+### Blockers
+- None
+
+### Next Session (Phase 6 — Week 11: React Frontend)
+- Vite + React + TypeScript scaffold in `frontend/`
+- MUI, TanStack Query, Axios, React Router, React Hook Form, Zod
+- JWT interceptor, AuthContext, protected routes
+- Auth pages: Login, Register
+
+---
+
 <!-- Add new entries above this line, newest first -->
