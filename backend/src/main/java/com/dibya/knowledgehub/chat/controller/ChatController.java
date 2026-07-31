@@ -6,10 +6,13 @@ import com.dibya.knowledgehub.common.response.ApiResponse;
 import com.dibya.knowledgehub.common.response.PagedResponse;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
 
 import java.util.List;
 import java.util.UUID;
@@ -49,6 +52,17 @@ public class ChatController {
             @AuthenticationPrincipal UserDetails userDetails) {
         List<MessageDTO> messages = chatService.getMessages(id, userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.ok(messages));
+    }
+
+    @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<ServerSentEvent<String>> stream(
+            @RequestParam String question,
+            @RequestParam(required = false) UUID conversationId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return chatService.stream(question, conversationId, userDetails.getUsername())
+                .map(token -> ServerSentEvent.<String>builder()
+                        .data(token)
+                        .build());
     }
 
     @DeleteMapping("/{id}")

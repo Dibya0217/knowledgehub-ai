@@ -377,4 +377,39 @@ curl http://localhost:8080/api/v1/chat -H "Authorization: Bearer $TOKEN"
 
 ---
 
+## 2026-07-31 — Phase 5 Week 9: Streaming, Redis Memory, Citations
+
+### Done
+- **Day 59** — `SimpleMessage` record + `ConversationMemoryService`: Redis List per conversation (`chat:memory:{id}`), RPUSH + LTRIM to 20 entries + EXPIRE 1h; `push()`, `getHistory()`, `clear()`
+- **Day 61** — `LlmService.stream()` via `ChatClient.stream().content()` → `Flux<String>`; `ChatService.stream()` — same RAG pipeline as `chat()` but streams tokens, saves ASSISTANT message + citations in `doOnComplete`; `GET /api/v1/chat/stream` SSE endpoint returning `Flux<ServerSentEvent<String>>`
+- **Day 62** — `CitationExtractor`: maps Spring AI Document metadata → `MessageCitation` entities (documentId, chunkIndex, filename, excerpt = first 200 chars)
+- **Day 63** — `V6__create_message_citations.sql` + `MessageCitation` entity + `MessageCitationRepository`; citations saved after each ASSISTANT message in `chat()` and `stream()`; `MessageDTO` updated with `List<CitationDTO>`; `getMessages()` loads citations per message
+
+### Decisions
+- SSE streaming via Spring MVC `Flux<ServerSentEvent<String>>` — works without WebFlux server (Spring MVC supports reactive return types)
+- `doOnComplete()` callback in `stream()` for saving ASSISTANT message — Flux completes when Ollama finishes token stream
+- `MessageCitation.document_id` stored as raw UUID column (no FK to documents) to avoid cascade issues when document deleted independently
+- Redis memory used in addition to PostgreSQL history — Redis for fast context retrieval, DB for durability
+
+### Verification
+```bash
+# Stream endpoint (tokens arrive in real time)
+curl -N "http://localhost:8080/api/v1/chat/stream?question=What+is+this+document+about%3F" \
+  -H "Authorization: Bearer $TOKEN" -H "Accept: text/event-stream"
+
+# Citations in messages
+curl http://localhost:8080/api/v1/chat/<uuid>/messages -H "Authorization: Bearer $TOKEN"
+# → messages[].citations[].filename + excerpt populated
+```
+
+### Blockers
+- None
+
+### Next Session (Phase 5 — Week 10)
+- Token count estimator (trim context if approaching LLM window limit)
+- Resilience4j retry/fallback for LLM failures
+- Phase 5 review: full backend MVP
+
+---
+
 <!-- Add new entries above this line, newest first -->

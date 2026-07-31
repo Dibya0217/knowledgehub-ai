@@ -1,6 +1,9 @@
 package com.dibya.knowledgehub.chat.service;
 
 import com.dibya.knowledgehub.chat.dto.*;
+import com.dibya.knowledgehub.citation.CitationExtractor;
+import com.dibya.knowledgehub.citation.entity.MessageCitation;
+import com.dibya.knowledgehub.citation.repository.MessageCitationRepository;
 import com.dibya.knowledgehub.conversation.entity.Conversation;
 import com.dibya.knowledgehub.conversation.entity.Message;
 import com.dibya.knowledgehub.conversation.entity.MessageRole;
@@ -8,6 +11,7 @@ import com.dibya.knowledgehub.conversation.repository.ConversationRepository;
 import com.dibya.knowledgehub.conversation.repository.MessageRepository;
 import com.dibya.knowledgehub.exception.ResourceNotFoundException;
 import com.dibya.knowledgehub.llm.LlmService;
+import com.dibya.knowledgehub.memory.ConversationMemoryService;
 import com.dibya.knowledgehub.prompt.PromptBuilder;
 import com.dibya.knowledgehub.rag.RagService;
 import com.dibya.knowledgehub.user.entity.User;
@@ -17,11 +21,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Flux;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 @Transactional
@@ -29,71 +36,66 @@ public class ChatService {
 
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
+    private final MessageCitationRepository messageCitationRepository;
     private final UserRepository userRepository;
     private final RagService ragService;
     private final LlmService llmService;
     private final PromptBuilder promptBuilder;
+    private final CitationExtractor citationExtractor;
+    private final ConversationMemoryService memoryService;
 
     public ChatService(ConversationRepository conversationRepository,
                        MessageRepository messageRepository,
+                       MessageCitationRepository messageCitationRepository,
                        UserRepository userRepository,
                        RagService ragService,
                        LlmService llmService,
-                       PromptBuilder promptBuilder) {
+                       PromptBuilder promptBuilder,
+                       CitationExtractor citationExtractor,
+                       ConversationMemoryService memoryService) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
+        this.messageCitationRepository = messageCitationRepository;
         this.userRepository = userRepository;
         this.ragService = ragService;
         this.llmService = llmService;
         this.promptBuilder = promptBuilder;
+        this.citationExtractor = citationExtractor;
+        this.memoryService = memoryService;
     }
 
     public ChatResponse chat(ChatRequest request, String userEmail) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        Conversation conversation;
-        if (request.conversationId() != null) {
-            conversation = conversationRepository.findByIdAndUser(request.conversationId(), user)
-                    .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
-        } else {
-            conversation = new Conversation();
-            conversation.setUser(user);
-            String title = request.question().length() > 60
-                    ? request.question().substring(0, 60)
-                    : request.question();
-            conversation.setTitle(title);
-            conversation = conversationRepository.save(conversation);
-        }
+        Conversation conversation = loadOrCreate(request.conversationId(), request.question(), user);
 
         List<Message> recentHistory = messageRepository.findTop20ByConversationOrderByCreatedAtDesc(conversation);
         List<Message> history = new ArrayList<>(recentHistory);
-        java.util.Collections.reverse(history);
+        Collections.reverse(history);
 
         List<Document> chunks = ragService.retrieve(request.question(), user.getId(), 5);
         String context = ragService.buildContext(chunks);
-
-        List<org.springframework.ai.chat.messages.Message> messages =
-                promptBuilder.buildMessages(context, history, request.question());
-
         String systemPrompt = promptBuilder.buildSystem(context);
-        List<org.springframework.ai.chat.messages.Message> nonSystemMessages = messages.stream()
+
+        List<org.springframework.ai.chat.messages.Message> nonSystemMessages = promptBuilder
+                .buildMessages(context, history, request.question())
+                .stream()
                 .filter(m -> !(m instanceof org.springframework.ai.chat.messages.SystemMessage))
                 .toList();
 
         String answer = llmService.call(systemPrompt, nonSystemMessages);
 
-        Message userMessage = new Message();
-        userMessage.setConversation(conversation);
-        userMessage.setRole(MessageRole.USER);
-        userMessage.setContent(request.question());
-        messageRepository.save(userMessage);
+        Message userMessage = saveMessage(conversation, MessageRole.USER, request.question());
+        Message assistantMessage = saveMessage(conversation, MessageRole.ASSISTANT, answer);
 
-        Message assistantMessage = new Message();
-        assistantMessage.setConversation(conversation);
-        assistantMessage.setRole(MessageRole.ASSISTANT);
-        assistantMessage.setContent(answer);
-        messageRepository.save(assistantMessage);
+        List<MessageCitation> citations = citationExtractor.extract(assistantMessage, chunks);
+        if (!citations.isEmpty()) {
+            messageCitationRepository.saveAll(citations);
+        }
+
+        memoryService.push(conversation.getId(), MessageRole.USER, request.question());
+        memoryService.push(conversation.getId(), MessageRole.ASSISTANT, answer);
 
         conversation.setUpdatedAt(OffsetDateTime.now());
         conversationRepository.save(conversation);
@@ -109,6 +111,53 @@ public class ChatService {
                 .toList();
 
         return new ChatResponse(conversation.getId(), answer, sources);
+    }
+
+    public Flux<String> stream(String question, UUID conversationId, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        Conversation conversation = loadOrCreate(conversationId, question, user);
+
+        List<Message> recentHistory = messageRepository.findTop20ByConversationOrderByCreatedAtDesc(conversation);
+        List<Message> history = new ArrayList<>(recentHistory);
+        Collections.reverse(history);
+
+        List<Document> chunks = ragService.retrieve(question, user.getId(), 5);
+        String context = ragService.buildContext(chunks);
+        String systemPrompt = promptBuilder.buildSystem(context);
+
+        List<org.springframework.ai.chat.messages.Message> nonSystemMessages = promptBuilder
+                .buildMessages(context, history, question)
+                .stream()
+                .filter(m -> !(m instanceof org.springframework.ai.chat.messages.SystemMessage))
+                .toList();
+
+        saveMessage(conversation, MessageRole.USER, question);
+        memoryService.push(conversation.getId(), MessageRole.USER, question);
+
+        AtomicReference<StringBuilder> buffer = new AtomicReference<>(new StringBuilder());
+        UUID conversationId2 = conversation.getId();
+
+        return llmService.stream(systemPrompt, nonSystemMessages)
+                .doOnNext(token -> buffer.get().append(token))
+                .doOnComplete(() -> {
+                    String fullAnswer = buffer.get().toString();
+                    Message assistantMessage = saveMessage(
+                            conversationRepository.findById(conversationId2).orElseThrow(),
+                            MessageRole.ASSISTANT,
+                            fullAnswer
+                    );
+                    List<MessageCitation> citations = citationExtractor.extract(assistantMessage, chunks);
+                    if (!citations.isEmpty()) {
+                        messageCitationRepository.saveAll(citations);
+                    }
+                    memoryService.push(conversationId2, MessageRole.ASSISTANT, fullAnswer);
+                    conversationRepository.findById(conversationId2).ifPresent(c -> {
+                        c.setUpdatedAt(OffsetDateTime.now());
+                        conversationRepository.save(c);
+                    });
+                });
     }
 
     @Transactional(readOnly = true)
@@ -127,7 +176,14 @@ public class ChatService {
                 .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
         return messageRepository.findByConversationOrderByCreatedAtAsc(conversation)
                 .stream()
-                .map(m -> new MessageDTO(m.getId(), m.getRole(), m.getContent(), m.getCreatedAt()))
+                .map(m -> {
+                    List<CitationDTO> citationDTOs = messageCitationRepository
+                            .findByMessageOrderByChunkIndexAsc(m)
+                            .stream()
+                            .map(c -> new CitationDTO(c.getDocumentId(), c.getFilename(), c.getChunkIndex(), c.getExcerpt()))
+                            .toList();
+                    return new MessageDTO(m.getId(), m.getRole(), m.getContent(), m.getCreatedAt(), citationDTOs);
+                })
                 .toList();
     }
 
@@ -136,6 +192,26 @@ public class ChatService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         Conversation conversation = conversationRepository.findByIdAndUser(conversationId, user)
                 .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+        memoryService.clear(conversation.getId());
         conversationRepository.delete(conversation);
+    }
+
+    private Conversation loadOrCreate(UUID conversationId, String question, User user) {
+        if (conversationId != null) {
+            return conversationRepository.findByIdAndUser(conversationId, user)
+                    .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+        }
+        Conversation conversation = new Conversation();
+        conversation.setUser(user);
+        conversation.setTitle(question.length() > 60 ? question.substring(0, 60) : question);
+        return conversationRepository.save(conversation);
+    }
+
+    private Message saveMessage(Conversation conversation, MessageRole role, String content) {
+        Message message = new Message();
+        message.setConversation(conversation);
+        message.setRole(role);
+        message.setContent(content);
+        return messageRepository.save(message);
     }
 }
