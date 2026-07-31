@@ -324,4 +324,57 @@ curl http://localhost:8080/api/v1/documents/{id}/status \
 
 ---
 
+## 2026-07-31 — Phase 4 Week 8: RAG Chat API + Conversation History
+
+### Done
+- **Day 50** — Flyway migration `V5__create_conversations.sql` (conversations + messages tables with indexes); `Conversation`, `Message`, `MessageRole` JPA entities; `ConversationRepository`, `MessageRepository`
+- **Day 51** — `LlmService`: wraps Spring AI `ChatClient`; `call(systemPrompt, messages)` → content string; `@Lazy ChatModel` injection avoids Ollama probe at startup
+- **Day 52** — `RagService`: `retrieve(question, userId, topK)` delegates to `VectorStoreService.search()`; `buildContext(docs)` formats chunks as `[Source: filename, chunk N]\n<text>`
+- **Day 53** — `PromptBuilder`: system template with `{context}` placeholder; `buildMessages(context, history, question)` returns `SystemMessage + last 10 history + UserMessage`
+- **Day 54** — DTOs: `ChatRequest`, `ChatResponse`, `SourceReference`, `ConversationSummary`, `MessageDTO`; `ChatService`: full pipeline — load/create conversation → RAG retrieve → LLM call → persist messages → return with sources
+- **Day 55** — `ChatController` at `/api/v1/chat`: POST chat, GET list conversations (paged), GET messages by conversation, DELETE conversation
+
+### Decisions
+- `LlmService.call()` separates system prompt from messages — `ChatClient.prompt().system(sp).messages(msgs).call()`
+- History capped at 10 messages (5 turns) via `findTop20ByConversationOrderByCreatedAtDesc` + reversed list in service
+- `@Lazy ChatModel` injection in `LlmService` mirrors `@Lazy VectorStore` pattern — prevents Ollama probe at startup
+- Flyway disabled locally; Hibernate `ddl-auto: update` creates conversations + messages tables automatically
+
+### Verification
+```bash
+# 1. Start app (Ollama + Qdrant running, doc already READY)
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+
+# 2. Login
+TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"test@test.com","password":"password123"}' \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['accessToken'])")
+
+# 3. First chat (new conversation)
+curl -X POST http://localhost:8080/api/v1/chat \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"question":"What is this document about?","conversationId":null}'
+
+# 4. Follow-up (use conversationId from step 3)
+curl -X POST http://localhost:8080/api/v1/chat \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"question":"Tell me more","conversationId":"<uuid>"}'
+
+# 5. List conversations
+curl http://localhost:8080/api/v1/chat -H "Authorization: Bearer $TOKEN"
+```
+
+### Blockers
+- None
+
+### Next Session (Phase 4 — Week 9)
+- Frontend chat UI (React + WebSocket or polling)
+- Streaming responses via SSE
+- Document management UI
+
+---
+
 <!-- Add new entries above this line, newest first -->
