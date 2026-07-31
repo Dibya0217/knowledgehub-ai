@@ -1,5 +1,6 @@
 package com.dibya.knowledgehub.exception;
 
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -97,6 +98,15 @@ public class GlobalExceptionHandler {
                                                                 HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(ErrorResponse.of(
                 405, "Method Not Allowed", ex.getMessage(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(CallNotPermittedException.class)
+    public ResponseEntity<ErrorResponse> handleCircuitBreakerOpen(CallNotPermittedException ex,
+                                                                   HttpServletRequest request) {
+        log.warn("Circuit breaker open for LLM calls: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(ErrorResponse.of(
+                503, "Service Unavailable", "AI service is temporarily unavailable. Please try again shortly.",
+                request.getRequestURI()));
     }
 
     @ExceptionHandler(AiProviderException.class)

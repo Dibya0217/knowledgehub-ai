@@ -2,16 +2,24 @@ package com.dibya.knowledgehub.citation.entity;
 
 import com.dibya.knowledgehub.conversation.entity.Message;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "message_citations")
+@Getter
+@Setter
+@NoArgsConstructor
 public class MessageCitation {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @Setter(AccessLevel.NONE)
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -30,6 +38,7 @@ public class MessageCitation {
     @Column(columnDefinition = "TEXT")
     private String excerpt;
 
+    @Setter(AccessLevel.NONE)
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
@@ -37,25 +46,4 @@ public class MessageCitation {
     public void prePersist() {
         this.createdAt = OffsetDateTime.now();
     }
-
-    public MessageCitation() {}
-
-    public UUID getId() { return id; }
-
-    public Message getMessage() { return message; }
-    public void setMessage(Message message) { this.message = message; }
-
-    public UUID getDocumentId() { return documentId; }
-    public void setDocumentId(UUID documentId) { this.documentId = documentId; }
-
-    public int getChunkIndex() { return chunkIndex; }
-    public void setChunkIndex(int chunkIndex) { this.chunkIndex = chunkIndex; }
-
-    public String getFilename() { return filename; }
-    public void setFilename(String filename) { this.filename = filename; }
-
-    public String getExcerpt() { return excerpt; }
-    public void setExcerpt(String excerpt) { this.excerpt = excerpt; }
-
-    public OffsetDateTime getCreatedAt() { return createdAt; }
 }
