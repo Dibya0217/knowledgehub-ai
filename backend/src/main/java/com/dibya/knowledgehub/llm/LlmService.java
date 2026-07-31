@@ -5,6 +5,7 @@ import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 
 import java.util.List;
 
@@ -22,6 +23,14 @@ public class LlmService {
                 .system(systemPrompt)
                 .messages(messages)
                 .call()
+                .content();
+    }
+
+    public Flux<String> stream(String systemPrompt, List<Message> messages) {
+        return chatClient.prompt()
+                .system(systemPrompt)
+                .messages(messages)
+                .stream()
                 .content();
     }
 }
