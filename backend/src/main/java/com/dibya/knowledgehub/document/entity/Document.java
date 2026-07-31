@@ -2,16 +2,24 @@ package com.dibya.knowledgehub.document.entity;
 
 import com.dibya.knowledgehub.user.entity.User;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "documents")
+@Getter
+@Setter
+@NoArgsConstructor
 public class Document {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @Setter(AccessLevel.NONE)
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -37,6 +45,7 @@ public class Document {
     @Column(nullable = false, length = 20)
     private DocumentStatus status = DocumentStatus.PENDING;
 
+    @Setter(AccessLevel.NONE)
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
@@ -57,32 +66,4 @@ public class Document {
     public void preUpdate() {
         this.updatedAt = OffsetDateTime.now();
     }
-
-    public Document() {}
-
-    public UUID getId() { return id; }
-
-    public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
-
-    public String getFilename() { return filename; }
-    public void setFilename(String filename) { this.filename = filename; }
-
-    public String getOriginalName() { return originalName; }
-    public void setOriginalName(String originalName) { this.originalName = originalName; }
-
-    public String getFileType() { return fileType; }
-    public void setFileType(String fileType) { this.fileType = fileType; }
-
-    public long getFileSize() { return fileSize; }
-    public void setFileSize(long fileSize) { this.fileSize = fileSize; }
-
-    public String getStoragePath() { return storagePath; }
-    public void setStoragePath(String storagePath) { this.storagePath = storagePath; }
-
-    public DocumentStatus getStatus() { return status; }
-    public void setStatus(DocumentStatus status) { this.status = status; }
-
-    public OffsetDateTime getCreatedAt() { return createdAt; }
-    public OffsetDateTime getUpdatedAt() { return updatedAt; }
 }

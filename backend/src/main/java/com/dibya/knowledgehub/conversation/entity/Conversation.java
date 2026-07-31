@@ -2,16 +2,24 @@ package com.dibya.knowledgehub.conversation.entity;
 
 import com.dibya.knowledgehub.user.entity.User;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "conversations")
+@Getter
+@Setter
+@NoArgsConstructor
 public class Conversation {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @Setter(AccessLevel.NONE)
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -21,6 +29,7 @@ public class Conversation {
     @Column(length = 255)
     private String title;
 
+    @Setter(AccessLevel.NONE)
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
@@ -38,19 +47,4 @@ public class Conversation {
     public void preUpdate() {
         this.updatedAt = OffsetDateTime.now();
     }
-
-    public Conversation() {}
-
-    public UUID getId() { return id; }
-
-    public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
-
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
-
-    public OffsetDateTime getCreatedAt() { return createdAt; }
-
-    public OffsetDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(OffsetDateTime updatedAt) { this.updatedAt = updatedAt; }
 }
