@@ -17,6 +17,7 @@ import com.dibya.knowledgehub.parser.ParserFactory;
 import com.dibya.knowledgehub.storage.FileStorageService;
 import com.dibya.knowledgehub.user.entity.User;
 import com.dibya.knowledgehub.user.repository.UserRepository;
+import com.dibya.knowledgehub.vector.VectorStoreService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
@@ -44,19 +45,22 @@ public class DocumentService {
     private final FileStorageService fileStorageService;
     private final ParserFactory parserFactory;
     private final ChunkingService chunkingService;
+    private final VectorStoreService vectorStoreService;
 
     public DocumentService(DocumentRepository documentRepository,
                            DocumentMetadataRepository metadataRepository,
                            UserRepository userRepository,
                            FileStorageService fileStorageService,
                            ParserFactory parserFactory,
-                           ChunkingService chunkingService) {
+                           ChunkingService chunkingService,
+                           VectorStoreService vectorStoreService) {
         this.documentRepository = documentRepository;
         this.metadataRepository = metadataRepository;
         this.userRepository = userRepository;
         this.fileStorageService = fileStorageService;
         this.parserFactory = parserFactory;
         this.chunkingService = chunkingService;
+        this.vectorStoreService = vectorStoreService;
     }
 
     @Transactional
@@ -107,6 +111,8 @@ public class DocumentService {
 
             List<TextChunk> chunks = chunkingService.chunk(
                     parsed.text(), document.getId(), document.getUser().getId(), document.getFilename());
+
+            vectorStoreService.upsert(chunks);
 
             int wordCount = Arrays.stream(parsed.text().split("\\s+"))
                     .filter(w -> !w.isBlank())
@@ -173,6 +179,8 @@ public class DocumentService {
         } catch (IOException e) {
             log.warn("Could not delete file for document {}: {}", id, e.getMessage());
         }
+
+        vectorStoreService.deleteByDocumentId(id);
 
         documentRepository.delete(document);
     }

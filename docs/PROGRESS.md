@@ -270,4 +270,58 @@ curl http://localhost:8080/api/v1/documents/{id}/status \
 
 ---
 
+## 2026-07-30 — Phase 4 Week 7: Spring AI, Embeddings, Qdrant Vector Store
+
+### Done
+- **Day 43** — Added Spring AI 2.0.0 BOM + starters to `pom.xml`: `spring-ai-starter-model-ollama`, `spring-ai-starter-model-openai`, `spring-ai-starter-vector-store-qdrant`
+- **Day 44** — `AiProviderConfig`: `@ConditionalOnProperty` selects Ollama (default) or OpenAI `EmbeddingModel` as `@Primary` bean via `app.ai.embedding-provider`
+- **Day 45** — `VectorStoreConfig`: empty config class; Qdrant auto-config handles collection creation via `initialize-schema: true`
+- **Day 46** — `EmbeddingService`: wraps Spring AI `EmbeddingModel`; `embed(String)` → `float[]`, `embedBatch(List<String>)` → `List<float[]>`
+- **Day 47** — `VectorStoreService`: `upsert(chunks)` converts `TextChunk` → Spring AI `Document` with metadata (documentId/userId/filename/index) → `VectorStore.add()`; `search(query, userId, topK)` filtered by userId; `deleteByDocumentId(UUID)` via string filter expression
+- **Day 48** — Wired `VectorStoreService` into `DocumentService`: `processDocumentAsync()` calls `vectorStoreService.upsert(chunks)` after chunking; `deleteDocument()` calls `vectorStoreService.deleteByDocumentId(id)` before DB delete
+- Added `spring.ai.*` config to `application.yml` (Ollama, OpenAI, Qdrant) and `application-local.yml` (local overrides)
+
+### Decisions
+- Spring AI 2.0.0 used (not 1.0.0) — Spring AI 2.x targets Spring Boot 4.x; Spring AI 1.0.0 targets Spring Boot 3.x
+- Starter artifact IDs changed in 2.0.0: `spring-ai-starter-model-ollama` (not `spring-ai-ollama-spring-boot-starter`)
+- `EmbeddingService` not injected into `DocumentService` — embedding happens inside `VectorStoreService.upsert()` via Spring AI's internal pipeline (Spring AI auto-embeds on `VectorStore.add()`)
+
+### Verification
+```bash
+# 1. Ensure Ollama running
+# ollama pull nomic-embed-text && ollama serve
+
+# 2. Ensure Qdrant running
+# docker compose up qdrant -d
+
+# 3. Start app
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+
+# 4. Upload a document
+TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"test@test.com","password":"password123"}' \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['accessToken'])")
+curl -X POST http://localhost:8080/api/v1/documents/upload \
+  -H "Authorization: Bearer $TOKEN" -F "file=@test.pdf"
+
+# 5. Poll until READY
+curl http://localhost:8080/api/v1/documents/{id}/status \
+  -H "Authorization: Bearer $TOKEN"
+
+# 6. Verify in Qdrant dashboard
+# http://localhost:6333/dashboard → knowledge_vectors → points count > 0
+```
+
+### Blockers
+- None
+
+### Next Session (Phase 4 — Week 8)
+- RAG retrieval service: query → embed → Qdrant search → context assembly
+- `POST /api/v1/chat` endpoint
+- Conversation history (PostgreSQL)
+- Citation tracking
+
+---
+
 <!-- Add new entries above this line, newest first -->
