@@ -5,9 +5,10 @@ interface UseSSEOptions {
   onToken: (token: string) => void
   onComplete: () => void
   onError: (err: string) => void
+  onConversationId?: (id: string) => void
 }
 
-export function useSSE({ onToken, onComplete, onError }: UseSSEOptions) {
+export function useSSE({ onToken, onComplete, onError, onConversationId }: UseSSEOptions) {
   const [isStreaming, setIsStreaming] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
 
@@ -43,8 +44,18 @@ export function useSSE({ onToken, onComplete, onError }: UseSSEOptions) {
 
           for (const line of lines) {
             if (line.startsWith('data:')) {
-              const data = line.slice(5).trim()
-              if (data) onToken(data)
+              // SSE format: "data: value" — skip "data:" and one optional space
+              const data = line.startsWith('data: ') ? line.slice(6) : line.slice(5)
+              if (!data) continue
+
+              // Final event carrying conversationId — intercept, don't render
+              if (data.startsWith('[CONV:') && data.endsWith(']')) {
+                const convId = data.slice(6, -1)
+                onConversationId?.(convId)
+                continue
+              }
+
+              onToken(data)
             }
           }
         }
@@ -58,7 +69,7 @@ export function useSSE({ onToken, onComplete, onError }: UseSSEOptions) {
         setIsStreaming(false)
       }
     },
-    [onToken, onComplete, onError],
+    [onToken, onComplete, onError, onConversationId],
   )
 
   const abort = useCallback(() => {

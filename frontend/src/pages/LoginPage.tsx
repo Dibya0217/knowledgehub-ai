@@ -8,6 +8,7 @@ import { Mail, Lock, Brain } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 import { authApi } from '@/api/auth'
 import { useAuthStore } from '@/store/authStore'
 
@@ -90,10 +91,9 @@ export function LoginPage() {
               error={errors.email?.message}
               autoComplete="email"
             />
-            <Input
+            <PasswordInput
               {...register('password')}
               label="Password"
-              type="password"
               placeholder="••••••••"
               icon={<Lock className="w-4 h-4" />}
               error={errors.password?.message}

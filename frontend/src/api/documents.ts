@@ -14,7 +14,7 @@ export const documentsApi = {
   },
 
   list: () =>
-    api.get<ApiResponse<DocumentDTO[]>>('/documents').then((r) => r.data),
+    api.get<ApiResponse<{ content: DocumentDTO[] }>>('/documents').then((r) => r.data),
 
   getStatus: (id: string) =>
     api.get<ApiResponse<DocumentDTO>>(`/documents/${id}/status`).then((r) => r.data),

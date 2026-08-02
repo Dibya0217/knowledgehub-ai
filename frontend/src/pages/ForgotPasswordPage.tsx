@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Mail, Brain, CheckCircle } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { Mail, Brain } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -18,7 +18,7 @@ type FormData = z.infer<typeof schema>
 
 export function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false)
-  const [sent, setSent] = useState(false)
+  const navigate = useNavigate()
 
   const {
     register,
@@ -30,7 +30,8 @@ export function ForgotPasswordPage() {
     setLoading(true)
     try {
       await authApi.forgotPassword(data)
-      setSent(true)
+      toast.success('Reset code sent! Check your email.')
+      navigate(`/reset-password?email=${encodeURIComponent(data.email)}`)
     } catch {
       toast.error('Failed to send reset email')
     } finally {
@@ -55,54 +56,31 @@ export function ForgotPasswordPage() {
             <div className="w-14 h-14 rounded-2xl gradient-bg flex items-center justify-center shadow-lg shadow-indigo-500/40">
               <Brain className="w-8 h-8 text-white" />
             </div>
+            <div className="text-center">
+              <h1 className="text-xl font-bold text-[rgb(var(--text-primary))]">Forgot password?</h1>
+              <p className="text-sm text-[rgb(var(--text-secondary))] mt-1">Enter your email to get a reset code</p>
+            </div>
           </div>
 
-          <AnimatePresence mode="wait">
-            {sent ? (
-              <motion.div
-                key="sent"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="flex flex-col items-center gap-4 text-center"
-              >
-                <CheckCircle className="w-12 h-12 text-green-400" />
-                <h2 className="text-lg font-semibold">Check your email</h2>
-                <p className="text-sm text-[rgb(var(--text-secondary))]">
-                  We sent a password reset link. Check your inbox.
-                </p>
-                <Link to="/login" className="text-indigo-400 hover:text-indigo-300 text-sm font-medium">
-                  Back to sign in
-                </Link>
-              </motion.div>
-            ) : (
-              <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <div className="text-center mb-6">
-                  <h1 className="text-xl font-bold text-[rgb(var(--text-primary))]">Forgot password?</h1>
-                  <p className="text-sm text-[rgb(var(--text-secondary))] mt-1">Enter your email to get a reset link</p>
-                </div>
+          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+            <Input
+              {...register('email')}
+              label="Email"
+              type="email"
+              placeholder="you@example.com"
+              icon={<Mail className="w-4 h-4" />}
+              error={errors.email?.message}
+            />
+            <Button type="submit" loading={loading} size="lg" className="w-full">
+              Send Reset Code
+            </Button>
+          </form>
 
-                <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-                  <Input
-                    {...register('email')}
-                    label="Email"
-                    type="email"
-                    placeholder="you@example.com"
-                    icon={<Mail className="w-4 h-4" />}
-                    error={errors.email?.message}
-                  />
-                  <Button type="submit" loading={loading} size="lg" className="w-full">
-                    Send Reset Link
-                  </Button>
-                </form>
-
-                <p className="text-center text-sm text-[rgb(var(--text-secondary))] mt-6">
-                  <Link to="/login" className="text-indigo-400 hover:text-indigo-300 font-medium">
-                    Back to sign in
-                  </Link>
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <p className="text-center text-sm text-[rgb(var(--text-secondary))] mt-6">
+            <Link to="/login" className="text-indigo-400 hover:text-indigo-300 font-medium">
+              Back to sign in
+            </Link>
+          </p>
         </div>
       </motion.div>
     </div>

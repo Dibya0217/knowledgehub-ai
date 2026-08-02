@@ -9,6 +9,7 @@ import com.dibya.knowledgehub.auth.dto.SendVerificationRequest;
 import com.dibya.knowledgehub.auth.dto.VerifyEmailRequest;
 import com.dibya.knowledgehub.auth.entity.RefreshToken;
 import com.dibya.knowledgehub.auth.repository.RefreshTokenRepository;
+import com.dibya.knowledgehub.email.EmailService;
 import com.dibya.knowledgehub.exception.ConflictException;
 import com.dibya.knowledgehub.exception.UnauthorizedException;
 import com.dibya.knowledgehub.role.RoleRepository;
@@ -44,6 +45,7 @@ public class AuthService {
     private final UserDetailsServiceImpl userDetailsService;
     private final AuthenticationManager authenticationManager;
     private final StringRedisTemplate redisTemplate;
+    private final EmailService emailService;
 
     public AuthService(UserRepository userRepository,
                        RoleRepository roleRepository,
@@ -52,7 +54,8 @@ public class AuthService {
                        JwtService jwtService,
                        UserDetailsServiceImpl userDetailsService,
                        AuthenticationManager authenticationManager,
-                       StringRedisTemplate redisTemplate) {
+                       StringRedisTemplate redisTemplate,
+                       EmailService emailService) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.refreshTokenRepository = refreshTokenRepository;
@@ -61,10 +64,11 @@ public class AuthService {
         this.userDetailsService = userDetailsService;
         this.authenticationManager = authenticationManager;
         this.redisTemplate = redisTemplate;
+        this.emailService = emailService;
     }
 
     @Transactional
-    public AuthResponse register(RegisterRequest req) {
+    public void register(RegisterRequest req) {
         if (userRepository.existsByEmail(req.email())) {
             throw new ConflictException("Email already registered: " + req.email());
         }
@@ -80,7 +84,10 @@ public class AuthService {
         user.setRoles(Set.of(role));
         userRepository.save(user);
 
-        return buildAuthResponse(user);
+        String otp = generateOtp();
+        String key = "email:verify:" + req.email();
+        redisTemplate.opsForValue().set(key, otp, 15, TimeUnit.MINUTES);
+        emailService.sendVerificationEmail(req.email(), req.name(), otp);
     }
 
     @Transactional
@@ -90,6 +97,11 @@ public class AuthService {
         );
         User user = userRepository.findByEmail(req.email())
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
+
+        if (!user.isEmailVerified()) {
+            throw new UnauthorizedException("Email not verified. Please check your inbox.");
+        }
+
         return buildAuthResponse(user);
     }
 
@@ -110,13 +122,12 @@ public class AuthService {
     }
 
     public void forgotPassword(ForgotPasswordRequest req) {
-        if (!userRepository.existsByEmail(req.email())) {
-            return;
-        }
-        String otp = String.format("%06d", new Random().nextInt(999999));
-        String key = "otp:" + req.email();
-        redisTemplate.opsForValue().set(key, otp, 5, TimeUnit.MINUTES);
-        log.info("Password reset OTP for {}: {}", req.email(), otp);
+        userRepository.findByEmail(req.email()).ifPresent(user -> {
+            String otp = generateOtp();
+            String key = "otp:" + req.email();
+            redisTemplate.opsForValue().set(key, otp, 5, TimeUnit.MINUTES);
+            emailService.sendPasswordResetEmail(req.email(), user.getName(), otp);
+        });
     }
 
     @Transactional
@@ -142,10 +153,10 @@ public class AuthService {
         if (user.isEmailVerified()) {
             return;
         }
-        String otp = String.format("%06d", new Random().nextInt(999999));
+        String otp = generateOtp();
         String key = "email:verify:" + req.email();
         redisTemplate.opsForValue().set(key, otp, 15, TimeUnit.MINUTES);
-        log.info("Email verification OTP for {}: {}", req.email(), otp);
+        emailService.sendVerificationEmail(req.email(), user.getName(), otp);
     }
 
     @Transactional
@@ -175,6 +186,10 @@ public class AuthService {
         userRepository.findByEmail(email).ifPresent(user ->
                 refreshTokenRepository.revokeAllByUser(user)
         );
+    }
+
+    private String generateOtp() {
+        return String.format("%06d", new Random().nextInt(999999));
     }
 
     private AuthResponse buildAuthResponse(User user) {

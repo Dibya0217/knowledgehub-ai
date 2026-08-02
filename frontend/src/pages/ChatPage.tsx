@@ -22,7 +22,7 @@ export function ChatPage() {
   const { data: conversationsData } = useQuery({
     queryKey: ['conversations'],
     queryFn: () => chatApi.getConversations(),
-    select: (r) => r.data,
+    select: (r) => r.data.content,
   })
 
   const { data: messagesData, isLoading: messagesLoading } = useQuery({
@@ -56,12 +56,16 @@ export function ChatPage() {
     setStreamingContent((prev) => prev + token)
   }, [])
 
+  const onConversationId = useCallback((id: string) => {
+    setActiveConversationId(id)
+    qc.invalidateQueries({ queryKey: ['conversations'] })
+    qc.invalidateQueries({ queryKey: ['messages', id] })
+  }, [qc])
+
   const onComplete = useCallback(() => {
     setIsStreaming(false)
     setStreamingContent('')
-    qc.invalidateQueries({ queryKey: ['conversations'] })
-    qc.invalidateQueries({ queryKey: ['messages', activeConversationId] })
-  }, [qc, activeConversationId])
+  }, [])
 
   const onError = useCallback((err: string) => {
     setIsStreaming(false)
@@ -69,7 +73,7 @@ export function ChatPage() {
     toast.error(`Stream error: ${err}`)
   }, [])
 
-  const { stream, abort } = useSSE({ onToken, onComplete, onError })
+  const { stream, abort } = useSSE({ onToken, onComplete, onError, onConversationId })
 
   async function handleSend(question: string) {
     const userMsg: MessageDTO = {

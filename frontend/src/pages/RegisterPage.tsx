@@ -8,11 +8,11 @@ import { Mail, Lock, User, Brain } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 import { authApi } from '@/api/auth'
 
 const schema = z.object({
-  firstName: z.string().min(1, 'Required'),
-  lastName: z.string().min(1, 'Required'),
+  name: z.string().min(2, 'Minimum 2 characters'),
   email: z.string().email('Invalid email'),
   password: z.string().min(8, 'Minimum 8 characters'),
 })
@@ -34,12 +34,21 @@ export function RegisterPage() {
     try {
       const res = await authApi.register(data)
       if (res.success) {
-        toast.success('Account created! Please sign in.')
-        navigate('/login')
+        toast.success('Account created! Check your email for a verification code.')
+        navigate(`/verify-email?email=${encodeURIComponent(data.email)}`)
       }
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Registration failed'
-      toast.error(msg)
+      const status = (err as { response?: { status?: number } })?.response?.status
+      if (status === 409) {
+        toast.error('Account already exists.', {
+          description: 'Please sign in instead.',
+          action: { label: 'Sign In', onClick: () => navigate('/login') },
+          duration: 6000,
+        })
+      } else {
+        const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Registration failed'
+        toast.error(msg)
+      }
     } finally {
       setLoading(false)
     }
@@ -70,21 +79,13 @@ export function RegisterPage() {
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-            <div className="grid grid-cols-2 gap-3">
-              <Input
-                {...register('firstName')}
-                label="First name"
-                placeholder="John"
-                icon={<User className="w-4 h-4" />}
-                error={errors.firstName?.message}
-              />
-              <Input
-                {...register('lastName')}
-                label="Last name"
-                placeholder="Doe"
-                error={errors.lastName?.message}
-              />
-            </div>
+            <Input
+              {...register('name')}
+              label="Full name"
+              placeholder="John Doe"
+              icon={<User className="w-4 h-4" />}
+              error={errors.name?.message}
+            />
             <Input
               {...register('email')}
               label="Email"
@@ -94,10 +95,9 @@ export function RegisterPage() {
               error={errors.email?.message}
               autoComplete="email"
             />
-            <Input
+            <PasswordInput
               {...register('password')}
               label="Password"
-              type="password"
               placeholder="••••••••"
               icon={<Lock className="w-4 h-4" />}
               error={errors.password?.message}

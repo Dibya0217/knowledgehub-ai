@@ -32,9 +32,9 @@ export function DocumentsPage() {
   const { data: docs, isLoading } = useQuery({
     queryKey: ['documents'],
     queryFn: () => documentsApi.list(),
-    select: (r) => r.data,
+    select: (r) => r.data.content,
     refetchInterval: (query) => {
-      const docs = query.state.data?.data
+      const docs = query.state.data?.data?.content
       return docs?.some((d: DocumentDTO) => d.status === 'PROCESSING' || d.status === 'PENDING')
         ? 3000
         : false

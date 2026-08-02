@@ -14,9 +14,10 @@ export interface AuthTokens {
 export interface UserProfile {
   id: string
   email: string
-  firstName: string
-  lastName: string
+  name: string
   provider: string
+  emailVerified: boolean
+  createdAt: string
   roles: string[]
 }
 
@@ -28,8 +29,7 @@ export interface LoginRequest {
 export interface RegisterRequest {
   email: string
   password: string
-  firstName: string
-  lastName: string
+  name: string
 }
 
 export interface ForgotPasswordRequest {
@@ -98,6 +98,5 @@ export interface DocumentDTO {
 }
 
 export interface UpdateProfileRequest {
-  firstName: string
-  lastName: string
+  name: string
 }

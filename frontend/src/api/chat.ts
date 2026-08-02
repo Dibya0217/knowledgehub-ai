@@ -6,7 +6,7 @@ export const chatApi = {
     api.post<ApiResponse<ChatResponse>>('/chat', data).then((r) => r.data),
 
   getConversations: () =>
-    api.get<ApiResponse<ConversationSummary[]>>('/chat/conversations').then((r) => r.data),
+    api.get<ApiResponse<{ content: ConversationSummary[] }>>('/chat/conversations').then((r) => r.data),
 
   getMessages: (conversationId: string) =>
     api.get<ApiResponse<MessageDTO[]>>(`/chat/${conversationId}/messages`).then((r) => r.data),

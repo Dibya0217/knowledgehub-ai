@@ -101,7 +101,7 @@ export function Sidebar() {
         {user && (
           <div className={cn('flex items-center gap-3 px-3 py-2', collapsed && 'justify-center')}>
             <div className="flex-shrink-0 w-8 h-8 rounded-full gradient-bg flex items-center justify-center text-white text-xs font-bold">
-              {user.firstName?.[0]?.toUpperCase() ?? 'U'}
+              {user.name?.[0]?.toUpperCase() ?? 'U'}
             </div>
             <AnimatePresence>
               {!collapsed && (
@@ -112,7 +112,7 @@ export function Sidebar() {
                   className="flex-1 min-w-0"
                 >
                   <p className="text-xs font-medium text-[rgb(var(--text-primary))] truncate">
-                    {user.firstName} {user.lastName}
+                    {user.name}
                   </p>
                   <p className="text-xs text-[rgb(var(--text-secondary))] truncate">{user.email}</p>
                 </motion.div>

@@ -163,7 +163,10 @@ public class ChatService {
                         c.setUpdatedAt(OffsetDateTime.now());
                         conversationRepository.save(c);
                     });
-                });
+                })
+                .concatWith(reactor.core.publisher.Mono.fromCallable(
+                        () -> "[CONV:" + conversationId2 + "]"
+                ));
     }
 
     @Transactional(readOnly = true)

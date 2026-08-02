@@ -14,8 +14,7 @@ import api from '@/api/axios'
 import type { ApiResponse, UserProfile } from '@/types'
 
 const schema = z.object({
-  firstName: z.string().min(1, 'Required'),
-  lastName: z.string().min(1, 'Required'),
+  name: z.string().min(2, 'Minimum 2 characters'),
 })
 
 type FormData = z.infer<typeof schema>
@@ -37,7 +36,7 @@ export function SettingsPage() {
   } = useForm<FormData>({ resolver: zodResolver(schema) })
 
   useEffect(() => {
-    if (profile) reset({ firstName: profile.firstName, lastName: profile.lastName })
+    if (profile) reset({ name: profile.name })
   }, [profile, reset])
 
   const updateMutation = useMutation({
@@ -55,7 +54,6 @@ export function SettingsPage() {
   return (
     <div className="h-full overflow-y-auto px-6 py-6">
       <div className="max-w-xl mx-auto flex flex-col gap-6">
-        {/* Profile card */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -72,26 +70,17 @@ export function SettingsPage() {
           </div>
 
           <form onSubmit={handleSubmit((d) => updateMutation.mutate(d))} className="flex flex-col gap-4">
-            <div className="grid grid-cols-2 gap-3">
-              <Input
-                {...register('firstName')}
-                label="First name"
-                error={errors.firstName?.message}
-              />
-              <Input
-                {...register('lastName')}
-                label="Last name"
-                error={errors.lastName?.message}
-              />
-            </div>
-
+            <Input
+              {...register('name')}
+              label="Full name"
+              error={errors.name?.message}
+            />
             <Input
               label="Email"
               value={profile?.email ?? ''}
               disabled
               className="opacity-50"
             />
-
             <Input
               label="Provider"
               value={profile?.provider ?? ''}
@@ -106,7 +95,6 @@ export function SettingsPage() {
           </form>
         </motion.div>
 
-        {/* Roles */}
         {profile?.roles && (
           <motion.div
             initial={{ opacity: 0, y: 12 }}
@@ -116,7 +104,7 @@ export function SettingsPage() {
           >
             <h2 className="font-semibold text-[rgb(var(--text-primary))] mb-3">Roles</h2>
             <div className="flex flex-wrap gap-2">
-              {profile.roles.map((role) => (
+              {[...profile.roles].map((role) => (
                 <span
                   key={role}
                   className="px-3 py-1 rounded-full text-xs font-medium glass border border-indigo-500/20 text-indigo-300"
