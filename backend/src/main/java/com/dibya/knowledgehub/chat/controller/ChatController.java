@@ -35,7 +35,7 @@ public class ChatController {
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
-    @GetMapping
+    @GetMapping("/conversations")
     public ResponseEntity<ApiResponse<PagedResponse<ConversationSummary>>> listConversations(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,

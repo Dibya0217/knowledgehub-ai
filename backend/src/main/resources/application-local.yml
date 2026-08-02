@@ -1,6 +1,17 @@
 spring:
   main:
     allow-bean-definition-overriding: true
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${GMAIL_USERNAME:knowledgehub1702@gmail.com}
+    password: ${GMAIL_APP_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
   datasource:
     url: jdbc:postgresql://localhost:5433/knowledgehub
     username: knowledgehub
@@ -81,7 +92,8 @@ app:
   jwt:
     secret: bG9jYWwtZGV2LXNlY3JldC1taW4tMzItY2hhcnMtbG9uZy1yZXBsYWNlLWluLXByb2Q=
   cors:
-    allowed-origins: http://localhost:5173
+    allowed-origins: http://localhost:*
+  frontend-url: http://localhost:3000
   ai:
     provider: ollama
     embedding-provider: ollama

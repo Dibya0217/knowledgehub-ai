@@ -2,6 +2,7 @@ package com.dibya.knowledgehub.auth.controller;
 
 import com.dibya.knowledgehub.auth.dto.AuthResponse;
 import com.dibya.knowledgehub.auth.dto.ForgotPasswordRequest;
+// AuthResponse still used by login, refresh
 import com.dibya.knowledgehub.auth.dto.LoginRequest;
 import com.dibya.knowledgehub.auth.dto.RefreshRequest;
 import com.dibya.knowledgehub.auth.dto.RegisterRequest;
@@ -31,10 +32,11 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    @Operation(summary = "Register new user")
-    public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest req) {
-        AuthResponse response = authService.register(req);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(response));
+    @Operation(summary = "Register new user — sends verification email")
+    public ResponseEntity<ApiResponse<Void>> register(@Valid @RequestBody RegisterRequest req) {
+        authService.register(req);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok("Account created. Check your email for a verification code."));
     }
 
     @PostMapping("/login")
