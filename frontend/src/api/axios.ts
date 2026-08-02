@@ -30,7 +30,8 @@ api.interceptors.response.use(
   async (error) => {
     const original = error.config
 
-    if (error.response?.status === 401 && !original._retry) {
+    const isAuthEndpoint = original.url?.includes('/auth/')
+    if (error.response?.status === 401 && !original._retry && !isAuthEndpoint) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject })
@@ -46,6 +47,7 @@ api.interceptors.response.use(
       const refreshToken = useAuthStore.getState().refreshToken
 
       if (!refreshToken) {
+        isRefreshing = false
         useAuthStore.getState().logout()
         return Promise.reject(error)
       }

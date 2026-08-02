@@ -7,6 +7,7 @@ const pageTitles: Record<string, string> = {
   '/chat': 'Chat',
   '/documents': 'Documents',
   '/settings': 'Settings',
+  '/admin': 'Admin Dashboard',
 }
 
 export function AppLayout() {

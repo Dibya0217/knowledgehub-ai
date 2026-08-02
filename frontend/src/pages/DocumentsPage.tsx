@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Upload, FileText, Trash2, CheckCircle, Clock, AlertCircle, Loader2 } from 'lucide-react'
+import { Upload, FileText, Trash2, CheckCircle, Clock, AlertCircle, Loader2, Search, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { documentsApi } from '@/api/documents'
 import { Button } from '@/components/ui/Button'
@@ -11,10 +11,10 @@ import { formatDate } from '@/lib/utils'
 import type { DocumentDTO } from '@/types'
 
 const statusConfig = {
-  PENDING: { icon: Clock, color: 'text-yellow-400', label: 'Pending' },
-  PROCESSING: { icon: Loader2, color: 'text-blue-400', label: 'Processing' },
-  READY: { icon: CheckCircle, color: 'text-green-400', label: 'Ready' },
-  FAILED: { icon: AlertCircle, color: 'text-red-400', label: 'Failed' },
+  PENDING: { icon: Clock, color: 'text-yellow-400', label: 'Pending', bg: 'bg-yellow-400/10' },
+  PROCESSING: { icon: Loader2, color: 'text-blue-400', label: 'Processing', bg: 'bg-blue-400/10' },
+  READY: { icon: CheckCircle, color: 'text-green-400', label: 'Ready', bg: 'bg-green-400/10' },
+  FAILED: { icon: AlertCircle, color: 'text-red-400', label: 'Failed', bg: 'bg-red-400/10' },
 }
 
 function formatBytes(bytes: number) {
@@ -23,10 +23,19 @@ function formatBytes(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+function fileTypeIcon(fileType: string) {
+  if (fileType.includes('pdf')) return '📄'
+  if (fileType.includes('word') || fileType.includes('doc')) return '📝'
+  if (fileType.includes('text')) return '📃'
+  return '📎'
+}
+
 export function DocumentsPage() {
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [dragOver, setDragOver] = useState(false)
+  const [search, setSearch] = useState('')
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const qc = useQueryClient()
 
   const { data: docs, isLoading } = useQuery({
@@ -46,9 +55,17 @@ export function DocumentsPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['documents'] })
       toast.success('Document deleted')
+      setDeleteConfirm(null)
     },
     onError: () => toast.error('Delete failed'),
   })
+
+  const filtered = useMemo(() => {
+    if (!docs) return []
+    const q = search.toLowerCase().trim()
+    if (!q) return docs
+    return docs.filter((d) => d.originalName.toLowerCase().includes(q))
+  }, [docs, search])
 
   async function handleUpload(file: File) {
     if (!file) return
@@ -135,6 +152,42 @@ export function DocumentsPage() {
           )}
         </motion.div>
 
+        {/* Search bar */}
+        {!isLoading && (docs ?? []).length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="relative"
+          >
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[rgb(var(--text-secondary))]" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search documents..."
+              className="w-full glass rounded-xl pl-9 pr-9 py-2.5 text-sm text-[rgb(var(--text-primary))] placeholder:text-[rgb(var(--text-secondary))] outline-none focus:ring-2 focus:ring-indigo-500/30 border border-white/10 focus:border-indigo-500/40 transition-all"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--text-primary))]"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </motion.div>
+        )}
+
+        {/* Stats row */}
+        {!isLoading && (docs ?? []).length > 0 && (
+          <div className="flex items-center gap-4 text-xs text-[rgb(var(--text-secondary))]">
+            <span>{(docs ?? []).length} total</span>
+            {search && <span className="text-indigo-400">{filtered.length} matching</span>}
+            <span className="ml-auto">
+              {(docs ?? []).filter(d => d.status === 'READY').length} ready
+            </span>
+          </div>
+        )}
+
         {/* Document list */}
         <div className="flex flex-col gap-3">
           {isLoading
@@ -143,19 +196,19 @@ export function DocumentsPage() {
               ))
             : (
               <AnimatePresence>
-                {(docs ?? []).map((doc, i) => {
-                  const { icon: StatusIcon, color, label } = statusConfig[doc.status]
+                {filtered.map((doc, i) => {
+                  const { icon: StatusIcon, color, label, bg } = statusConfig[doc.status]
                   return (
                     <motion.div
                       key={doc.id}
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, x: -20 }}
-                      transition={{ delay: i * 0.05 }}
+                      transition={{ delay: i * 0.04 }}
                       className="glass rounded-xl p-4 flex items-center gap-4 group"
                     >
-                      <div className="w-10 h-10 rounded-xl glass flex items-center justify-center flex-shrink-0">
-                        <FileText className="w-5 h-5 text-indigo-400" />
+                      <div className="w-10 h-10 rounded-xl glass flex items-center justify-center flex-shrink-0 text-lg">
+                        {fileTypeIcon(doc.fileType)}
                       </div>
 
                       <div className="flex-1 min-w-0">
@@ -165,29 +218,48 @@ export function DocumentsPage() {
                         </p>
                       </div>
 
-                      <div className={cn('flex items-center gap-1.5 text-xs font-medium', color)}>
+                      <div className={cn('flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg', color, bg)}>
                         <StatusIcon className={cn('w-3.5 h-3.5', doc.status === 'PROCESSING' && 'animate-spin')} />
                         {label}
                       </div>
 
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        onClick={() => deleteMutation.mutate(doc.id)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+                      {deleteConfirm === doc.id ? (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => deleteMutation.mutate(doc.id)}
+                            className="text-xs px-2.5 py-1 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors font-medium"
+                          >
+                            Delete
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirm(null)}
+                            className="text-xs px-2.5 py-1 rounded-lg glass text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--text-primary))] transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => setDeleteConfirm(doc.id)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
                     </motion.div>
                   )
                 })}
               </AnimatePresence>
             )}
 
-          {!isLoading && (docs ?? []).length === 0 && (
+          {!isLoading && filtered.length === 0 && (
             <div className="text-center py-12 text-[rgb(var(--text-secondary))]">
               <FileText className="w-10 h-10 mx-auto mb-3 opacity-20" />
-              <p className="text-sm opacity-50">No documents yet. Upload one to get started.</p>
+              <p className="text-sm opacity-50">
+                {search ? `No documents matching "${search}"` : 'No documents yet. Upload one to get started.'}
+              </p>
             </div>
           )}
         </div>

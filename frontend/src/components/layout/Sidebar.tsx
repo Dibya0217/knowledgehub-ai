@@ -9,13 +9,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Brain,
+  ShieldCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/authStore'
 import { authApi } from '@/api/auth'
 import { toast } from 'sonner'
 
-const navItems = [
+const baseNavItems = [
   { to: '/chat', icon: MessageSquare, label: 'Chat' },
   { to: '/documents', icon: FileText, label: 'Documents' },
   { to: '/settings', icon: Settings, label: 'Settings' },
@@ -24,6 +25,10 @@ const navItems = [
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const { refreshToken, logout, user } = useAuthStore()
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN')
+  const navItems = isAdmin
+    ? [...baseNavItems, { to: '/admin', icon: ShieldCheck, label: 'Admin' }]
+    : baseNavItems
   const navigate = useNavigate()
 
   async function handleLogout() {
