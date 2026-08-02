@@ -20,14 +20,18 @@ public class EmbeddingService {
     }
 
     public float[] embed(String text) {
+        log.debug("Embedding single text: length={}", text.length());
         EmbeddingResponse response = embeddingModel.embedForResponse(List.of(text));
         return response.getResults().get(0).getOutput();
     }
 
     public List<float[]> embedBatch(List<String> texts) {
+        log.debug("Batch embedding {} texts", texts.size());
         EmbeddingResponse response = embeddingModel.embedForResponse(texts);
-        return response.getResults().stream()
+        List<float[]> results = response.getResults().stream()
                 .map(r -> r.getOutput())
                 .toList();
+        log.debug("Batch embedding complete: {} vectors returned", results.size());
+        return results;
     }
 }

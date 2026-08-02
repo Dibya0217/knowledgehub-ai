@@ -75,10 +75,13 @@ public class DocumentService {
     @Transactional
     @CacheEvict(value = "documents", key = "#email")
     public DocumentUploadResponse upload(MultipartFile file, String email) throws IOException {
+        log.info("Upload initiated: file='{}', size={} bytes, user={}", file.getOriginalFilename(), file.getSize(), email);
+
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + email));
 
         String mimeType = parserFactory.detectMimeType(file);
+        log.debug("Detected MIME type '{}' for file '{}'", mimeType, file.getOriginalFilename());
 
         Document document = new Document();
         document.setUser(user);
@@ -89,14 +92,17 @@ public class DocumentService {
         document.setStoragePath("");
         document.setStatus(DocumentStatus.PENDING);
         documentRepository.save(document);
+        log.debug("Document record created: id={}", document.getId());
 
         try {
             String storagePath = fileStorageService.store(file, user.getId(), document.getId());
             document.setStoragePath(storagePath);
             documentRepository.save(document);
+            log.debug("File stored at: {}", storagePath);
         } catch (IOException e) {
             document.setStatus(DocumentStatus.FAILED);
             documentRepository.save(document);
+            log.error("Failed to store file '{}' for user {}: {}", file.getOriginalFilename(), email, e.getMessage(), e);
             throw new StorageException("Failed to store file: " + file.getOriginalFilename(), e);
         }
 
@@ -109,8 +115,12 @@ public class DocumentService {
     @Async
     public void processDocumentAsync(UUID documentId, UUID userId) {
         Document document = documentRepository.findById(documentId).orElse(null);
-        if (document == null) return;
+        if (document == null) {
+            log.error("processDocumentAsync: document not found: {}", documentId);
+            return;
+        }
 
+        log.info("Processing document: id={}, name='{}'", documentId, document.getOriginalName());
         document.setStatus(DocumentStatus.PROCESSING);
         documentRepository.save(document);
 
@@ -118,9 +128,11 @@ public class DocumentService {
             Resource resource = fileStorageService.load(document.getStoragePath());
             ParsedDocument parsed = parserFactory.select(document.getFileType())
                     .parse(resource.getInputStream(), document.getFilename());
+            log.debug("Parsed document {}: pages={}", documentId, parsed.pageCount());
 
             List<TextChunk> chunks = chunkingService.chunk(
                     parsed.text(), document.getId(), document.getUser().getId(), document.getFilename());
+            log.debug("Chunked document {}: {} chunks produced", documentId, chunks.size());
 
             vectorStoreService.upsert(chunks);
 
@@ -137,11 +149,11 @@ public class DocumentService {
             metadata.setAuthor(parsed.metadata().getOrDefault("author", null));
             metadataRepository.save(metadata);
 
-            log.info("Processed document {} — {} chunks, {} pages, {} words",
-                    documentId, chunks.size(), parsed.pageCount(), wordCount);
-
             document.setStatus(DocumentStatus.READY);
             documentRepository.save(document);
+
+            log.info("Document READY: id={}, name='{}', chunks={}, pages={}, words={}",
+                    documentId, document.getOriginalName(), chunks.size(), parsed.pageCount(), wordCount);
 
             metrics.incrementDocumentsUploaded();
             auditService.log(userId, "DOCUMENT_UPLOAD", "document", documentId.toString(), null);
@@ -155,6 +167,7 @@ public class DocumentService {
 
     @Transactional(readOnly = true)
     public Page<DocumentResponse> listDocuments(String email, Pageable pageable) {
+        log.debug("Listing documents for: {}", email);
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + email));
         return documentRepository.findByUser(user, pageable).map(this::toResponse);
@@ -162,6 +175,7 @@ public class DocumentService {
 
     @Transactional(readOnly = true)
     public DocumentResponse getDocument(UUID id, String email) {
+        log.debug("Fetching document: id={}, user={}", id, email);
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + email));
         Document document = documentRepository.findByIdAndUser(id, user)
@@ -181,6 +195,7 @@ public class DocumentService {
     @Transactional
     @CacheEvict(value = "documents", key = "#email")
     public void deleteDocument(UUID id, String email) {
+        log.info("Document delete requested: id={}, user={}", id, email);
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + email));
         Document document = documentRepository.findByIdAndUser(id, user)
@@ -189,6 +204,7 @@ public class DocumentService {
         try {
             if (!document.getStoragePath().isBlank()) {
                 fileStorageService.delete(document.getStoragePath());
+                log.debug("File deleted from storage for document: {}", id);
             }
         } catch (IOException e) {
             log.warn("Could not delete file for document {}: {}", id, e.getMessage());
@@ -197,6 +213,7 @@ public class DocumentService {
         vectorStoreService.deleteByDocumentId(id);
         documentRepository.delete(document);
 
+        log.info("Document deleted: id={}, name='{}', user={}", id, document.getOriginalName(), email);
         auditService.log(user.getId(), "DOCUMENT_DELETE", "document", id.toString(), null);
     }
 

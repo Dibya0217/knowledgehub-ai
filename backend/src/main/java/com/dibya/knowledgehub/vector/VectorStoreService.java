@@ -25,6 +25,7 @@ public class VectorStoreService {
     }
 
     public void upsert(List<TextChunk> chunks) {
+        log.debug("Upserting {} vectors to Qdrant", chunks.size());
         List<Document> docs = chunks.stream()
                 .map(chunk -> new Document(
                         chunk.chunkId(),
@@ -42,7 +43,8 @@ public class VectorStoreService {
     }
 
     public List<Document> search(String query, UUID userId, int topK) {
-        return vectorStore.similaritySearch(
+        log.debug("Vector search: userId={}, topK={}", userId, topK);
+        List<Document> results = vectorStore.similaritySearch(
                 SearchRequest.builder()
                         .query(query)
                         .topK(topK)
@@ -50,10 +52,13 @@ public class VectorStoreService {
                         .filterExpression("userId == '" + userId + "'")
                         .build()
         );
+        log.debug("Vector search returned {} results for userId={}", results.size(), userId);
+        return results;
     }
 
     public void deleteByDocumentId(UUID documentId) {
+        log.debug("Deleting vectors for document: {}", documentId);
         vectorStore.delete("documentId == '" + documentId + "'");
-        log.info("Deleted vectors for document {}", documentId);
+        log.info("Deleted vectors for document: {}", documentId);
     }
 }
