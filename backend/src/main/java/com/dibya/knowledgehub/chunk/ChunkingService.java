@@ -1,5 +1,7 @@
 package com.dibya.knowledgehub.chunk;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
@@ -10,14 +12,18 @@ import java.util.UUID;
 @Service
 public class ChunkingService {
 
+    private static final Logger log = LoggerFactory.getLogger(ChunkingService.class);
+
     private static final int CHUNK_SIZE = 800;
     private static final int CHUNK_OVERLAP = 150;
     private static final String[] SEPARATORS = {"\n\n", "\n", ". ", " "};
 
     public List<TextChunk> chunk(String text, UUID documentId, UUID userId, String filename) {
         if (text == null || text.isBlank()) {
+            log.warn("Chunking called with blank text for document: {}", documentId);
             return List.of();
         }
+        log.debug("Chunking document {}: textLength={}", documentId, text.length());
         List<String> rawChunks = splitRecursive(text.strip(), CHUNK_SIZE, CHUNK_OVERLAP);
         List<TextChunk> chunks = new ArrayList<>();
         OffsetDateTime now = OffsetDateTime.now();
@@ -32,6 +38,7 @@ public class ChunkingService {
                     now
             ));
         }
+        log.debug("Produced {} chunks for document: {}", chunks.size(), documentId);
         return chunks;
     }
 
@@ -47,7 +54,7 @@ public class ChunkingService {
             }
         }
 
-        // Hard split — no separator worked
+        log.debug("No separator worked — using hard split");
         return hardSplit(text, chunkSize, overlap);
     }
 
@@ -64,7 +71,6 @@ public class ChunkingService {
             String candidate = current.isEmpty() ? part : current + sep + part;
             if (candidate.length() > chunkSize && !current.isEmpty()) {
                 chunks.add(current.toString().strip());
-                // Start next chunk with overlap
                 String tail = current.toString();
                 current = new StringBuilder(tail.length() > overlap
                         ? tail.substring(tail.length() - overlap)

@@ -164,6 +164,16 @@
 			<version>${resilience4j.version}</version>
 		</dependency>
 
+		<!-- ── Observability ── -->
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-registry-prometheus</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-tracing-bridge-brave</artifactId>
+		</dependency>
+
 		<!-- ── MapStruct ── -->
 		<dependency>
 			<groupId>org.mapstruct</groupId>

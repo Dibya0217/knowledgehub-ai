@@ -470,4 +470,44 @@ curl http://localhost:8080/api/v1/chat/<uuid>/messages -H "Authorization: Bearer
 
 ---
 
+## 2026-08-03 — Phase 7 Week 13: Redis Caching, Prometheus Metrics, Security Headers, Audit Logging, Grafana
+
+### Done
+- **CacheConfig** — `@EnableCaching` + `RedisCacheManager`: `users` cache 5-min TTL, `documents` cache 2-min TTL, key prefix `knowledgehub::`
+- **UserService** — `@Cacheable("users")` on `getProfile(email)`, `@CacheEvict("users")` on `updateProfile(email)`
+- **DocumentService** — `@CacheEvict("documents")` on `upload()` and `deleteDocument()`; audit `DOCUMENT_UPLOAD` on READY, `DOCUMENT_DELETE`; Micrometer counter incremented on READY
+- **KnowledgeHubMetrics** — `@Component` wrapping `MeterRegistry`: `knowledgehub.chat.requests.total` counter, `knowledgehub.documents.uploaded.total` counter, `knowledgehub.rag.latency` timer, `knowledgehub.embedding.latency` timer
+- **RagService** — records `rag_latency` timer per `retrieve()` call
+- **ChatService** — increments `chat_requests` counter on each `stream()` call
+- **SecurityHeadersFilter** — `OncePerRequestFilter` adding: `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `X-XSS-Protection: 1; mode=block`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`, `Content-Security-Policy`
+- **SecurityConfig** — adds `SecurityHeadersFilter` before `RateLimitFilter` before `JwtAuthFilter`
+- **AuthService** — audit `REGISTER` on register, `LOGIN` on login success, `PASSWORD_RESET` on resetPassword
+- **AdminController** — audit `ADMIN_LIST_USERS` on listUsers via `@AuthenticationPrincipal`
+- **V7__create_audit_logs.sql** — Flyway migration: `audit_logs` table with indexes on `user_id` + `timestamp DESC`
+- **pom.xml** — added `micrometer-registry-prometheus` + `micrometer-tracing-bridge-brave`
+- **application.yml** — added `management.tracing.sampling.probability: 1.0`
+- **docker-compose.yml** — added Prometheus (port 9090) + Grafana (port 3001, admin/admin) services with `grafana_data` volume
+- **docker/prometheus/prometheus.yml** — scrape `host.docker.internal:8080/actuator/prometheus` every 15s
+- **docker/grafana/provisioning/datasources/prometheus.yml** — auto-provisions Prometheus datasource
+- **docker/grafana/provisioning/dashboards/dashboard.yml** — dashboard provider from `/etc/grafana/provisioning/dashboards`
+
+### Decisions
+- `prefixCacheNameWith` used instead of deprecated `keyPrefix` (Spring Data Redis 4.x rename)
+- `processDocumentAsync` signature extended to accept `userId` directly (avoids lazy-loading the User entity in `@Async` context after transaction ends)
+- Audit calls in `@Async` processDocumentAsync — fire-and-forget, no transaction dependency
+- Grafana on port 3001 (3000 used by frontend dev server)
+- Tracing probability 1.0 for dev; lower in prod via env override
+
+### Verification
+- `./mvnw compile` — PASS (clean compile, no errors)
+
+### Next Session
+- Start backend and verify: `curl /actuator/prometheus | grep knowledgehub`
+- Prometheus UI at localhost:9090 → target knowledgehub-backend UP
+- Grafana at localhost:3001 → Prometheus datasource connected
+- Redis `keys knowledgehub::*` after first API call
+- `audit_logs` table rows after login/upload/delete
+
+---
+
 <!-- Add new entries above this line, newest first -->

@@ -36,31 +36,37 @@ public class ConversationMemoryService {
             redisTemplate.opsForList().rightPush(key, json);
             redisTemplate.opsForList().trim(key, -MAX_MESSAGES, -1);
             redisTemplate.expire(key, TTL);
+            log.debug("Pushed {} message to memory: conversationId={}", role, conversationId);
         } catch (JsonProcessingException e) {
-            log.warn("Failed to push message to Redis memory for conversation {}", conversationId, e);
+            log.warn("Failed to push message to Redis memory for conversation {}: {}", conversationId, e.getMessage());
         }
     }
 
     public List<SimpleMessage> getHistory(UUID conversationId) {
+        log.debug("Fetching memory for conversation: {}", conversationId);
         String key = KEY_PREFIX + conversationId;
         List<String> entries = redisTemplate.opsForList().range(key, 0, -1);
         if (entries == null || entries.isEmpty()) {
+            log.debug("No memory found for conversation: {}", conversationId);
             return Collections.emptyList();
         }
-        return entries.stream()
+        List<SimpleMessage> messages = entries.stream()
                 .map(json -> {
                     try {
                         return objectMapper.readValue(json, SimpleMessage.class);
                     } catch (JsonProcessingException e) {
-                        log.warn("Failed to deserialize Redis message: {}", json, e);
+                        log.warn("Failed to deserialize Redis message for conversation {}: {}", conversationId, e.getMessage());
                         return null;
                     }
                 })
                 .filter(m -> m != null)
                 .toList();
+        log.debug("Loaded {} messages from memory for conversation: {}", messages.size(), conversationId);
+        return messages;
     }
 
     public void clear(UUID conversationId) {
         redisTemplate.delete(KEY_PREFIX + conversationId);
+        log.debug("Cleared memory for conversation: {}", conversationId);
     }
 }

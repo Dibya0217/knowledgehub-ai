@@ -6,6 +6,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -18,6 +20,8 @@ import java.util.concurrent.TimeUnit;
 
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
+
+    private static final Logger log = LoggerFactory.getLogger(RateLimitFilter.class);
 
     private static final String LOGIN_PATH = "/api/v1/auth/login";
     private static final int MAX_ATTEMPTS = 5;
@@ -45,6 +49,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
             }
 
             if (count != null && count > MAX_ATTEMPTS) {
+                log.warn("Rate limit exceeded: ip={}, attempts={}", ip, count);
                 response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
                 response.setContentType(MediaType.APPLICATION_JSON_VALUE);
                 ErrorResponse error = ErrorResponse.of(

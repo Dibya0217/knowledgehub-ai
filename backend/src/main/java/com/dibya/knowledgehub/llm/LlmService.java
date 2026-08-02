@@ -28,21 +28,25 @@ public class LlmService {
     @Retry(name = "llm", fallbackMethod = "callFallback")
     @CircuitBreaker(name = "llm", fallbackMethod = "callFallback")
     public String call(String systemPrompt, List<Message> messages) {
-        return chatClient.prompt()
+        log.debug("LLM call: {} messages in history", messages.size());
+        String response = chatClient.prompt()
                 .system(systemPrompt)
                 .messages(messages)
                 .call()
                 .content();
+        log.debug("LLM call completed: responseLength={}", response != null ? response.length() : 0);
+        return response;
     }
 
     public String callFallback(String systemPrompt, List<Message> messages, Exception ex) {
-        log.warn("LLM call failed, returning fallback response. Cause: {}", ex.getMessage());
+        log.warn("LLM call failed after retries — returning fallback. Cause: {}", ex.getMessage());
         return FALLBACK_MESSAGE;
     }
 
     @Retry(name = "llm", fallbackMethod = "streamFallback")
     @CircuitBreaker(name = "llm", fallbackMethod = "streamFallback")
     public Flux<String> stream(String systemPrompt, List<Message> messages) {
+        log.debug("LLM stream started: {} messages in history", messages.size());
         return chatClient.prompt()
                 .system(systemPrompt)
                 .messages(messages)
@@ -51,7 +55,7 @@ public class LlmService {
     }
 
     public Flux<String> streamFallback(String systemPrompt, List<Message> messages, Exception ex) {
-        log.warn("LLM stream failed, returning fallback response. Cause: {}", ex.getMessage());
+        log.warn("LLM stream failed after retries — returning fallback. Cause: {}", ex.getMessage());
         return Flux.just(FALLBACK_MESSAGE);
     }
 }
