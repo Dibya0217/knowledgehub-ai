@@ -46,6 +46,7 @@ public class VectorStoreService {
                 SearchRequest.builder()
                         .query(query)
                         .topK(topK)
+                        .similarityThreshold(0.5)
                         .filterExpression("userId == '" + userId + "'")
                         .build()
         );

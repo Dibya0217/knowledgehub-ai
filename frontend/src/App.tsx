@@ -10,7 +10,9 @@ import { ResetPasswordPage } from '@/pages/ResetPasswordPage'
 import { ChatPage } from '@/pages/ChatPage'
 import { DocumentsPage } from '@/pages/DocumentsPage'
 import { SettingsPage } from '@/pages/SettingsPage'
+import { AdminPage } from '@/pages/AdminPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
+import { useAuthStore } from '@/store/authStore'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,6 +22,12 @@ const queryClient = new QueryClient({
     },
   },
 })
+
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuthStore()
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN')
+  return isAdmin ? <>{children}</> : <Navigate to="/chat" replace />
+}
 
 export default function App() {
   return (
@@ -40,6 +48,14 @@ export default function App() {
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/documents" element={<DocumentsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route
+                path="/admin"
+                element={
+                  <AdminRoute>
+                    <AdminPage />
+                  </AdminRoute>
+                }
+              />
             </Route>
           </Route>
 

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MessageSquare, Plus, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -18,6 +19,24 @@ export function ConversationList({
   onNew,
   onDelete,
 }: ConversationListProps) {
+  const [confirmId, setConfirmId] = useState<string | null>(null)
+
+  function handleDeleteClick(e: React.MouseEvent, id: string) {
+    e.stopPropagation()
+    setConfirmId(id)
+  }
+
+  function handleConfirmDelete(e: React.MouseEvent, id: string) {
+    e.stopPropagation()
+    onDelete(id)
+    setConfirmId(null)
+  }
+
+  function handleCancelDelete(e: React.MouseEvent) {
+    e.stopPropagation()
+    setConfirmId(null)
+  }
+
   return (
     <aside className="w-64 flex-shrink-0 flex flex-col h-full border-r border-white/5 glass">
       <div className="p-3 border-b border-white/5">
@@ -40,33 +59,52 @@ export function ConversationList({
               exit={{ opacity: 0, x: -10 }}
               className="group relative"
             >
-              <button
-                onClick={() => onSelect(conv.id)}
-                className={cn(
-                  'w-full text-left px-3 py-2.5 rounded-xl text-sm transition-all duration-150 pr-8',
-                  activeId === conv.id
-                    ? 'bg-indigo-500/15 text-[rgb(var(--text-primary))] border border-indigo-500/20'
-                    : 'text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--text-primary))] hover:bg-white/5',
-                )}
-              >
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="w-3.5 h-3.5 flex-shrink-0 opacity-60" />
-                  <span className="truncate font-medium">{conv.title || 'New conversation'}</span>
+              {confirmId === conv.id ? (
+                <div className="px-3 py-2.5 rounded-xl glass border border-red-500/20 flex flex-col gap-2">
+                  <p className="text-xs text-[rgb(var(--text-secondary))]">Delete this conversation?</p>
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={(e) => handleConfirmDelete(e, conv.id)}
+                      className="flex-1 text-xs py-1 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 font-medium transition-colors"
+                    >
+                      Delete
+                    </button>
+                    <button
+                      onClick={handleCancelDelete}
+                      className="flex-1 text-xs py-1 rounded-lg glass text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--text-primary))] transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
-                <span className="text-xs opacity-40 mt-0.5 block pl-5">
-                  {conv.messageCount} messages
-                </span>
-              </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => onSelect(conv.id)}
+                    className={cn(
+                      'w-full text-left px-3 py-2.5 rounded-xl text-sm transition-all duration-150 pr-8',
+                      activeId === conv.id
+                        ? 'bg-indigo-500/15 text-[rgb(var(--text-primary))] border border-indigo-500/20'
+                        : 'text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--text-primary))] hover:bg-white/5',
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="w-3.5 h-3.5 flex-shrink-0 opacity-60" />
+                      <span className="truncate font-medium">{conv.title || 'New conversation'}</span>
+                    </div>
+                    <span className="text-xs opacity-40 mt-0.5 block pl-5">
+                      {conv.messageCount} messages
+                    </span>
+                  </button>
 
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onDelete(conv.id)
-                }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 w-6 h-6 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-500/10 transition-all"
-              >
-                <Trash2 className="w-3 h-3" />
-              </button>
+                  <button
+                    onClick={(e) => handleDeleteClick(e, conv.id)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 w-6 h-6 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-500/10 transition-all"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </>
+              )}
             </motion.div>
           ))}
         </AnimatePresence>

@@ -58,6 +58,8 @@ export function ChatPage() {
 
   const onConversationId = useCallback((id: string) => {
     setActiveConversationId(id)
+    setIsStreaming(false)
+    setStreamingContent('')
     qc.invalidateQueries({ queryKey: ['conversations'] })
     qc.invalidateQueries({ queryKey: ['messages', id] })
   }, [qc])
@@ -74,6 +76,23 @@ export function ChatPage() {
   }, [])
 
   const { stream, abort } = useSSE({ onToken, onComplete, onError, onConversationId })
+
+  const handleAbort = useCallback(() => {
+    abort()
+    if (streamingContent.trim()) {
+      setLocalMessages((prev) => [
+        ...prev,
+        {
+          id: `aborted-${Date.now()}`,
+          role: 'ASSISTANT' as const,
+          content: streamingContent,
+          createdAt: new Date().toISOString(),
+        },
+      ])
+    }
+    setIsStreaming(false)
+    setStreamingContent('')
+  }, [abort, streamingContent])
 
   async function handleSend(question: string) {
     const userMsg: MessageDTO = {
@@ -205,7 +224,7 @@ export function ChatPage() {
 
         <ChatInput
           onSend={handleSend}
-          onAbort={abort}
+          onAbort={handleAbort}
           isStreaming={isStreaming}
         />
       </div>

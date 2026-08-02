@@ -44,8 +44,8 @@ export function useSSE({ onToken, onComplete, onError, onConversationId }: UseSS
 
           for (const line of lines) {
             if (line.startsWith('data:')) {
-              // SSE format: "data: value" — skip "data:" and one optional space
-              const data = line.startsWith('data: ') ? line.slice(6) : line.slice(5)
+              // Spring SSE writes "data:<value>" (no space) — slice(5) preserves leading space in token
+              const data = line.slice(5)
               if (!data) continue
 
               // Final event carrying conversationId — intercept, don't render
@@ -62,7 +62,9 @@ export function useSSE({ onToken, onComplete, onError, onConversationId }: UseSS
 
         onComplete()
       } catch (err) {
-        if ((err as Error).name !== 'AbortError') {
+        if ((err as Error).name === 'AbortError') {
+          onComplete()
+        } else {
           onError((err as Error).message)
         }
       } finally {

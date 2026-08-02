@@ -436,4 +436,38 @@ curl http://localhost:8080/api/v1/chat/<uuid>/messages -H "Authorization: Bearer
 
 ---
 
+## 2026-08-01 — Phase 6 Week 12: Documents Search, Collapsible Citations, Admin Dashboard, Change Password
+
+### Done
+- **MessageBubble** — collapsible citations: replaced always-visible list with toggle button showing source count; AnimatePresence expand/collapse; shows line-clamp-3 excerpt when open
+- **DocumentsPage** — search/filter input with X clear button; file type emoji icons (PDF, DOC, TXT); status badges with background colors; inline delete confirmation (Delete/Cancel buttons replace trash icon); document stats row (total / matching / ready counts)
+- **ConversationList** — inline delete confirmation: clicking trash shows Delete/Cancel inline in the conversation slot before calling `onDelete`
+- **SettingsPage** — new "Change Password" card with OTP flow: sends OTP via `forgotPassword()`, shows 6-digit OTP boxes + new/confirm password fields, calls `resetPassword()` on submit; Cancel resets state
+- **Backend — AdminController** (`/api/v1/admin/**`): `GET /stats` (totalUsers, totalDocuments, totalConversations, totalMessages), `GET /users` (paginated UserProfileResponse sorted by createdAt desc); protected with `@PreAuthorize("hasRole('ADMIN')")`
+- **Backend — AdminStatsResponse** DTO record
+- **Backend** — `@EnableMethodSecurity` added to `KnowledgeHubApplication`
+- **SecurityConfig** — added `hasRole('ADMIN')` rule for `/api/v1/admin/**`
+- **AdminPage** — stat cards (users/docs/conversations/messages), Recharts BarChart with per-bar Cell colors, users table (name/email/provider/verified/roles/joined)
+- **api/admin.ts** — `adminApi.getStats()` + `adminApi.getUsers(page, size)`
+- **App.tsx** — `/admin` route guarded by `AdminRoute` (checks `ROLE_ADMIN` in Zustand store)
+- **Sidebar** — Admin nav item with `ShieldCheck` icon conditionally rendered for ROLE_ADMIN users
+- **AppLayout** — added `/admin` → `'Admin Dashboard'` to pageTitles
+- **recharts** installed (`^3.10.1`)
+
+### Decisions
+- OTP-based change password (not current-password field) — reuses existing forgotPassword/resetPassword flow, works for both LOCAL and OAuth2 users who may not have a password
+- Delete confirmation inline (not modal) — less disruptive, stays within the list item area
+- Admin route guarded on both frontend (AdminRoute component) and backend (Spring Security + @PreAuthorize)
+- Bar chart uses per-Cell fill colors to differentiate metrics visually without a legend
+
+### Blockers
+- None
+
+### Next Session (Phase 6 — Week 13)
+- End-to-end testing and polish
+- OAuth2 Google login flow
+- Mobile responsiveness improvements
+
+---
+
 <!-- Add new entries above this line, newest first -->
