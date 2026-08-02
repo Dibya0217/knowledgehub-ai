@@ -5,6 +5,8 @@ import com.dibya.knowledgehub.user.dto.UpdateProfileRequest;
 import com.dibya.knowledgehub.user.dto.UserProfileResponse;
 import com.dibya.knowledgehub.user.entity.User;
 import com.dibya.knowledgehub.user.repository.UserRepository;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +21,7 @@ public class UserService {
         this.userRepository = userRepository;
     }
 
+    @Cacheable(value = "users", key = "#email")
     public UserProfileResponse getProfile(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -26,6 +29,7 @@ public class UserService {
     }
 
     @Transactional
+    @CacheEvict(value = "users", key = "#email")
     public UserProfileResponse updateProfile(String email, UpdateProfileRequest req) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));

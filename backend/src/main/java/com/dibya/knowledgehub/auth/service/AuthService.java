@@ -1,5 +1,6 @@
 package com.dibya.knowledgehub.auth.service;
 
+import com.dibya.knowledgehub.audit.AuditService;
 import com.dibya.knowledgehub.auth.dto.AuthResponse;
 import com.dibya.knowledgehub.auth.dto.ForgotPasswordRequest;
 import com.dibya.knowledgehub.auth.dto.LoginRequest;
@@ -46,6 +47,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final StringRedisTemplate redisTemplate;
     private final EmailService emailService;
+    private final AuditService auditService;
 
     public AuthService(UserRepository userRepository,
                        RoleRepository roleRepository,
@@ -55,7 +57,8 @@ public class AuthService {
                        UserDetailsServiceImpl userDetailsService,
                        AuthenticationManager authenticationManager,
                        StringRedisTemplate redisTemplate,
-                       EmailService emailService) {
+                       EmailService emailService,
+                       AuditService auditService) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.refreshTokenRepository = refreshTokenRepository;
@@ -65,6 +68,7 @@ public class AuthService {
         this.authenticationManager = authenticationManager;
         this.redisTemplate = redisTemplate;
         this.emailService = emailService;
+        this.auditService = auditService;
     }
 
     @Transactional
@@ -84,6 +88,8 @@ public class AuthService {
         user.setRoles(Set.of(role));
         userRepository.save(user);
 
+        auditService.log(user.getId(), "REGISTER", "user", user.getId().toString(), null);
+
         String otp = generateOtp();
         String key = "email:verify:" + req.email();
         redisTemplate.opsForValue().set(key, otp, 15, TimeUnit.MINUTES);
@@ -102,6 +108,7 @@ public class AuthService {
             throw new UnauthorizedException("Email not verified. Please check your inbox.");
         }
 
+        auditService.log(user.getId(), "LOGIN", "auth", null, null);
         return buildAuthResponse(user);
     }
 
@@ -145,6 +152,7 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(req.newPassword()));
         userRepository.save(user);
         refreshTokenRepository.revokeAllByUser(user);
+        auditService.log(user.getId(), "PASSWORD_RESET", "auth", null, null);
     }
 
     public void sendVerification(SendVerificationRequest req) {

@@ -13,6 +13,7 @@ import com.dibya.knowledgehub.exception.ResourceNotFoundException;
 import com.dibya.knowledgehub.llm.LlmService;
 import com.dibya.knowledgehub.llm.TokenEstimator;
 import com.dibya.knowledgehub.memory.ConversationMemoryService;
+import com.dibya.knowledgehub.monitoring.KnowledgeHubMetrics;
 import com.dibya.knowledgehub.prompt.PromptBuilder;
 import com.dibya.knowledgehub.rag.RagService;
 import com.dibya.knowledgehub.user.entity.User;
@@ -45,6 +46,7 @@ public class ChatService {
     private final CitationExtractor citationExtractor;
     private final ConversationMemoryService memoryService;
     private final TokenEstimator tokenEstimator;
+    private final KnowledgeHubMetrics metrics;
 
     public ChatService(ConversationRepository conversationRepository,
                        MessageRepository messageRepository,
@@ -55,7 +57,8 @@ public class ChatService {
                        PromptBuilder promptBuilder,
                        CitationExtractor citationExtractor,
                        ConversationMemoryService memoryService,
-                       TokenEstimator tokenEstimator) {
+                       TokenEstimator tokenEstimator,
+                       KnowledgeHubMetrics metrics) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
         this.messageCitationRepository = messageCitationRepository;
@@ -66,6 +69,7 @@ public class ChatService {
         this.citationExtractor = citationExtractor;
         this.memoryService = memoryService;
         this.tokenEstimator = tokenEstimator;
+        this.metrics = metrics;
     }
 
     public ChatResponse chat(ChatRequest request, String userEmail) {
@@ -119,6 +123,7 @@ public class ChatService {
     }
 
     public Flux<String> stream(String question, UUID conversationId, String userEmail) {
+        metrics.incrementChatRequests();
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 

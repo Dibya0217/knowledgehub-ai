@@ -1,5 +1,6 @@
 package com.dibya.knowledgehub.document.service;
 
+import com.dibya.knowledgehub.audit.AuditService;
 import com.dibya.knowledgehub.chunk.ChunkingService;
 import com.dibya.knowledgehub.chunk.TextChunk;
 import com.dibya.knowledgehub.document.dto.DocumentResponse;
@@ -12,6 +13,7 @@ import com.dibya.knowledgehub.document.repository.DocumentMetadataRepository;
 import com.dibya.knowledgehub.document.repository.DocumentRepository;
 import com.dibya.knowledgehub.exception.ResourceNotFoundException;
 import com.dibya.knowledgehub.exception.StorageException;
+import com.dibya.knowledgehub.monitoring.KnowledgeHubMetrics;
 import com.dibya.knowledgehub.parser.ParsedDocument;
 import com.dibya.knowledgehub.parser.ParserFactory;
 import com.dibya.knowledgehub.storage.FileStorageService;
@@ -20,6 +22,7 @@ import com.dibya.knowledgehub.user.repository.UserRepository;
 import com.dibya.knowledgehub.vector.VectorStoreService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -37,7 +40,7 @@ import java.util.UUID;
 public class DocumentService {
 
     private static final Logger log = LoggerFactory.getLogger(DocumentService.class);
-    private static final long MAX_FILE_SIZE = 50L * 1024 * 1024; // 50MB
+    private static final long MAX_FILE_SIZE = 50L * 1024 * 1024;
 
     private final DocumentRepository documentRepository;
     private final DocumentMetadataRepository metadataRepository;
@@ -46,6 +49,8 @@ public class DocumentService {
     private final ParserFactory parserFactory;
     private final ChunkingService chunkingService;
     private final VectorStoreService vectorStoreService;
+    private final AuditService auditService;
+    private final KnowledgeHubMetrics metrics;
 
     public DocumentService(DocumentRepository documentRepository,
                            DocumentMetadataRepository metadataRepository,
@@ -53,7 +58,9 @@ public class DocumentService {
                            FileStorageService fileStorageService,
                            ParserFactory parserFactory,
                            ChunkingService chunkingService,
-                           VectorStoreService vectorStoreService) {
+                           VectorStoreService vectorStoreService,
+                           AuditService auditService,
+                           KnowledgeHubMetrics metrics) {
         this.documentRepository = documentRepository;
         this.metadataRepository = metadataRepository;
         this.userRepository = userRepository;
@@ -61,9 +68,12 @@ public class DocumentService {
         this.parserFactory = parserFactory;
         this.chunkingService = chunkingService;
         this.vectorStoreService = vectorStoreService;
+        this.auditService = auditService;
+        this.metrics = metrics;
     }
 
     @Transactional
+    @CacheEvict(value = "documents", key = "#email")
     public DocumentUploadResponse upload(MultipartFile file, String email) throws IOException {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + email));
@@ -90,14 +100,14 @@ public class DocumentService {
             throw new StorageException("Failed to store file: " + file.getOriginalFilename(), e);
         }
 
-        processDocumentAsync(document.getId());
+        processDocumentAsync(document.getId(), user.getId());
 
         return new DocumentUploadResponse(
                 document.getId(), document.getFilename(), document.getStatus(), document.getCreatedAt());
     }
 
     @Async
-    public void processDocumentAsync(UUID documentId) {
+    public void processDocumentAsync(UUID documentId, UUID userId) {
         Document document = documentRepository.findById(documentId).orElse(null);
         if (document == null) return;
 
@@ -133,6 +143,9 @@ public class DocumentService {
             document.setStatus(DocumentStatus.READY);
             documentRepository.save(document);
 
+            metrics.incrementDocumentsUploaded();
+            auditService.log(userId, "DOCUMENT_UPLOAD", "document", documentId.toString(), null);
+
         } catch (Exception e) {
             log.error("Failed to process document {}: {}", documentId, e.getMessage(), e);
             document.setStatus(DocumentStatus.FAILED);
@@ -166,6 +179,7 @@ public class DocumentService {
     }
 
     @Transactional
+    @CacheEvict(value = "documents", key = "#email")
     public void deleteDocument(UUID id, String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + email));
@@ -181,8 +195,9 @@ public class DocumentService {
         }
 
         vectorStoreService.deleteByDocumentId(id);
-
         documentRepository.delete(document);
+
+        auditService.log(user.getId(), "DOCUMENT_DELETE", "document", id.toString(), null);
     }
 
     private DocumentResponse toResponse(Document doc) {
