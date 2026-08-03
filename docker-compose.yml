@@ -1,5 +1,32 @@
 services:
 
+  app:
+    build: ./backend
+    container_name: knowledgehub-app
+    ports:
+      - "8080:8080"
+    env_file: .env
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DB_URL=jdbc:postgresql://postgres:5432/knowledgehub
+      - REDIS_HOST=redis
+      - QDRANT_HOST=qdrant
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: knowledgehub-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - app
+    restart: unless-stopped
+
   postgres:
     image: postgres:16-alpine
     container_name: knowledgehub-postgres
