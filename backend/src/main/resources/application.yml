@@ -2,7 +2,7 @@ spring:
   application:
     name: knowledgehub-ai
   profiles:
-    active: local
+    default: local
   datasource:
     url: ${DB_URL}
     username: ${DB_USER}

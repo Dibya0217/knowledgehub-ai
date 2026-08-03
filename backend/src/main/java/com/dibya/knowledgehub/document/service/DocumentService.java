@@ -22,7 +22,9 @@ import com.dibya.knowledgehub.user.repository.UserRepository;
 import com.dibya.knowledgehub.vector.VectorStoreService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -51,6 +53,9 @@ public class DocumentService {
     private final VectorStoreService vectorStoreService;
     private final AuditService auditService;
     private final KnowledgeHubMetrics metrics;
+
+    @Autowired @Lazy
+    private DocumentService self;
 
     public DocumentService(DocumentRepository documentRepository,
                            DocumentMetadataRepository metadataRepository,
@@ -106,7 +111,7 @@ public class DocumentService {
             throw new StorageException("Failed to store file: " + file.getOriginalFilename(), e);
         }
 
-        processDocumentAsync(document.getId(), user.getId());
+        self.processDocumentAsync(document.getId(), user.getId());
 
         return new DocumentUploadResponse(
                 document.getId(), document.getFilename(), document.getStatus(), document.getCreatedAt());
