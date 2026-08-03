@@ -510,4 +510,40 @@ curl http://localhost:8080/api/v1/chat/<uuid>/messages -H "Authorization: Bearer
 
 ---
 
+## 2026-08-03 — Phase 8 Week 14: Testing & CI/CD — All 30 Tests Passing
+
+### Done
+- **`spring-boot-starter-flyway`** — replaced bare `flyway-core` dep; Spring Boot 4.x moved Flyway autoconfiguration to a dedicated starter (`spring-boot-flyway`), so Flyway was silently not running in tests
+- **`application.yml`** — changed `spring.profiles.active: local` → `spring.profiles.default: local`; fixes `application-local.yml` loading during tests (which disabled Flyway via `flyway.enabled: false`)
+- **`logback-spring.xml`** — added fallback `<springProfile name="!local &amp; !dev &amp; !prod">` appender so logs appear during test runs (previously no output was produced in test profile)
+- **`V1__create_users_roles.sql`** — removed FK `REFERENCES users(id)` from `audit_logs.user_id`; async audit log inserts before user transaction commits causing FK violations
+- **`PostgresIntegrationTest`** — switched from `@Testcontainers + @Container static` to singleton container pattern (static block `postgres.start(); redis.start()`); `@Container static` on a base class stopped containers after each subclass, causing `Connection refused` 500 errors on subsequent test classes
+- **`PostgresIntegrationTest`** — added `redisTemplate.delete("rate:limit:127.0.0.1:login")` to `@BeforeEach`; login rate limiter state from `SecurityIntegrationTest.rate_limit_exceeded_returns429` was bleeding into `DocumentIntegrationTest`, causing 401 responses
+- **`DocumentController`** — changed upload response from `201 CREATED` → `202 ACCEPTED` + `ApiResponse.ok()`; semantically correct since processing is async/PENDING
+- **`DocumentService`** — added `@Autowired @Lazy private DocumentService self` and changed `processDocumentAsync(...)` call to `self.processDocumentAsync(...)`; classic Spring AOP self-invocation bug meant `@Async` was bypassed and docs completed synchronously (READY) before upload response was sent
+- **`SecurityIntegrationTest`** — removed duplicate `redisTemplate` field + `clearRateLimitKey()` `@BeforeEach` (moved to base class)
+- **`KnowledgeHubApplicationTests`** — added `@MockitoBean EmailService` to match other integration test contexts and share Spring context
+
+### Test Results
+```
+SecurityIntegrationTest  : 5/5  pass
+AuthIntegrationTest      : 7/7  pass
+AuthServiceTest          : 8/8  pass
+UserServiceTest          : 4/4  pass
+DocumentIntegrationTest  : 5/5  pass
+KnowledgeHubApplicationTests : 1/1 pass
+Total                    : 30/30  BUILD SUCCESS
+```
+
+### Decisions
+- Singleton container pattern (no `@Testcontainers`) is the correct approach for shared containers across multiple test classes — ryuk cleans up on JVM exit
+- Rate limit Redis key must be cleared globally in base class, not per-class, since all integration tests share the same in-container Redis
+- `@Lazy` self-injection is acceptable for fixing `@Async` self-invocation without extracting a new bean
+
+### Next Session
+- Create PR for Week 14 testing branch
+- Potentially add Week 15 features (e.g., E2E or frontend testing, prod deployment hardening)
+
+---
+
 <!-- Add new entries above this line, newest first -->

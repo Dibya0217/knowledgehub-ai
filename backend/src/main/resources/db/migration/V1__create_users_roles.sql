@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS user_roles (
 
 CREATE TABLE IF NOT EXISTS audit_logs (
     id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id     UUID         REFERENCES users(id) ON DELETE SET NULL,
+    user_id     UUID,
     action      VARCHAR(100) NOT NULL,
     resource    VARCHAR(100),
     resource_id VARCHAR(255),

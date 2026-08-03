@@ -70,7 +70,7 @@ public class DocumentController {
         }
 
         DocumentUploadResponse response = documentService.upload(file, userDetails.getUsername());
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(response));
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.ok(response));
     }
 
     @GetMapping

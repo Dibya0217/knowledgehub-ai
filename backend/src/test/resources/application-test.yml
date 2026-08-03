@@ -1,0 +1,62 @@
+spring:
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  mail:
+    host: localhost
+    port: 25
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: test-client-id
+            client-secret: test-client-secret
+            scope: email,profile
+        provider:
+          google:
+            authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
+            token-uri: https://oauth2.googleapis.com/token
+            user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
+            user-name-attribute: email
+  ai:
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        model: llama3.2
+      embedding:
+        model: nomic-embed-text
+    openai:
+      api-key: test-key
+    vectorstore:
+      qdrant:
+        host: localhost
+        port: 6334
+        collection-name: test_vectors
+        use-tls: false
+        initialize-schema: false
+        dimensions: 768
+
+app:
+  jwt:
+    secret: dGVzdC1zZWNyZXQtbWluLTMyLWNoYXJzLWxvbmctcmVwbGFjZQ==
+    access-token-expiry: 900000
+    refresh-token-expiry: 604800000
+  cors:
+    allowed-origins: http://localhost:5173
+  frontend-url: http://localhost:5173
+  ai:
+    provider: ollama
+    embedding-provider: ollama
+  storage:
+    location: ./test-uploads
+
+logging:
+  level:
+    com.dibya.knowledgehub: WARN
+    org.springframework.security: WARN
+    org.flywaydb: DEBUG
