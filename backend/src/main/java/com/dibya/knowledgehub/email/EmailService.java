@@ -1,6 +1,5 @@
 package com.dibya.knowledgehub.email;
 
-import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +41,7 @@ public class EmailService {
             helper.setText(buildVerificationHtml(name, otp, toEmail), true);
             mailSender.send(message);
             log.info("Verification email sent to {}", toEmail);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Failed to send verification email to {}: {}", toEmail, e.getMessage());
         }
     }
@@ -62,7 +61,7 @@ public class EmailService {
             helper.setText(buildPasswordResetHtml(name, otp), true);
             mailSender.send(message);
             log.info("Password reset email sent to {}", toEmail);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Failed to send password reset email to {}: {}", toEmail, e.getMessage());
         }
     }
