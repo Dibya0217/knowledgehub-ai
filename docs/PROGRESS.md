@@ -546,4 +546,27 @@ Total                    : 30/30  BUILD SUCCESS
 
 ---
 
+## 2026-08-04 — Railway Deployment Fix: EmailService startup crash
+
+### Root Cause
+Railway deployment crashing on startup with `Error creating bean 'emailService': Injection of autowired dependencies failed`. Traced through logs:
+- `SPRING_MAIL_USERNAME` IS set in Railway env (Spring relaxed binding provides `spring.mail.username`) ✓
+- `GMAIL_APP_PASSWORD` AND `SPRING_MAIL_PASSWORD` NOT set → `spring.mail.password = ${GMAIL_APP_PASSWORD}` fails to resolve → `MailProperties` binding fails → `mailSender` bean fails → `emailService` crashes
+
+### Fixed
+- **`application-prod.yml`** — added dual-lookup with empty defaults for mail credentials:
+  - `username: ${GMAIL_USERNAME:${SPRING_MAIL_USERNAME:}}` — accepts either env var name
+  - `password: ${GMAIL_APP_PASSWORD:${SPRING_MAIL_PASSWORD:}}` — prevents startup crash when password not set
+- **`EmailService.java`** — added empty default to `@Value("${spring.mail.username:}")` to guard against edge-case resolution failure
+- **`.env.example`** — documented `GMAIL_USERNAME` and `GMAIL_APP_PASSWORD` (were missing)
+
+### Required Railway Env Var
+Add to Railway: `GMAIL_APP_PASSWORD=<16-char Gmail app password>` (and optionally `GMAIL_USERNAME=<gmail>` if not already using `SPRING_MAIL_USERNAME`)
+
+### Next Session
+- Verify Railway redeploy succeeds
+- Consider adding Week 15 features
+
+---
+
 <!-- Add new entries above this line, newest first -->
