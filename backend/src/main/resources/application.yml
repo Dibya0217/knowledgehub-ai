@@ -26,6 +26,8 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASS:}
+      ssl:
+        enabled: ${REDIS_TLS:false}
   servlet:
     multipart:
       max-file-size: 50MB
@@ -124,4 +126,8 @@ app:
     provider: ${AI_PROVIDER:ollama}
     embedding-provider: ${EMBEDDING_PROVIDER:ollama}
   storage:
+    type: ${STORAGE_TYPE:local}
     location: ${STORAGE_PATH:./uploads}
+    s3:
+      bucket: ${S3_BUCKET:}
+      region: ${AWS_REGION:us-east-1}
