@@ -29,6 +29,10 @@ public class EmailService {
 
     @Async
     public void sendVerificationEmail(String toEmail, String name, String otp) {
+        if (fromAddress == null || fromAddress.isBlank()) {
+            log.error("Cannot send verification email: GMAIL_USERNAME not configured");
+            return;
+        }
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -45,6 +49,10 @@ public class EmailService {
 
     @Async
     public void sendPasswordResetEmail(String toEmail, String name, String otp) {
+        if (fromAddress == null || fromAddress.isBlank()) {
+            log.error("Cannot send password reset email: GMAIL_USERNAME not configured");
+            return;
+        }
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
