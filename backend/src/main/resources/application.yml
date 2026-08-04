@@ -52,12 +52,13 @@ spring:
         host: ${QDRANT_HOST:localhost}
         port: ${QDRANT_GRPC_PORT:6334}
         collection-name: ${QDRANT_COLLECTION:knowledge_vectors}
-        use-tls: false
+        api-key: ${QDRANT_API_KEY:}
+        use-tls: ${QDRANT_TLS:false}
         initialize-schema: true
         dimensions: ${EMBEDDING_DIMENSIONS:768}
 
 server:
-  port: 8080
+  port: ${PORT:8080}
   servlet:
     context-path: /
   error:
