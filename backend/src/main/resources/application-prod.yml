@@ -51,6 +51,9 @@ logging:
     com.dibya.knowledgehub: INFO
 
 management:
+  health:
+    mail:
+      enabled: false
   endpoint:
     health:
       show-details: never
