@@ -147,13 +147,13 @@ public class AuthService {
 
     public void forgotPassword(ForgotPasswordRequest req) {
         log.debug("Forgot-password OTP requested for: {}", req.email());
-        userRepository.findByEmail(req.email()).ifPresent(user -> {
-            String otp = generateOtp();
-            String key = "otp:" + req.email();
-            redisTemplate.opsForValue().set(key, otp, 5, TimeUnit.MINUTES);
-            emailService.sendPasswordResetEmail(req.email(), user.getName(), otp);
-            log.info("Password reset OTP sent to: {}", req.email());
-        });
+        User user = userRepository.findByEmail(req.email())
+                .orElseThrow(() -> new ResourceNotFoundException("No account found with that email address"));
+        String otp = generateOtp();
+        String key = "otp:" + req.email();
+        redisTemplate.opsForValue().set(key, otp, 5, TimeUnit.MINUTES);
+        emailService.sendPasswordResetEmail(req.email(), user.getName(), otp);
+        log.info("Password reset OTP sent to: {}", req.email());
     }
 
     @Transactional

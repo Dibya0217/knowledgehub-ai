@@ -32,8 +32,9 @@ export function ForgotPasswordPage() {
       await authApi.forgotPassword(data)
       toast.success('Reset code sent! Check your email.')
       navigate(`/reset-password?email=${encodeURIComponent(data.email)}`)
-    } catch {
-      toast.error('Failed to send reset email')
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Failed to send reset email'
+      toast.error(msg)
     } finally {
       setLoading(false)
     }
