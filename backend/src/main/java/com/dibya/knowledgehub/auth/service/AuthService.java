@@ -12,6 +12,7 @@ import com.dibya.knowledgehub.auth.entity.RefreshToken;
 import com.dibya.knowledgehub.auth.repository.RefreshTokenRepository;
 import com.dibya.knowledgehub.email.EmailService;
 import com.dibya.knowledgehub.exception.ConflictException;
+import com.dibya.knowledgehub.exception.ResourceNotFoundException;
 import com.dibya.knowledgehub.exception.UnauthorizedException;
 import com.dibya.knowledgehub.role.RoleRepository;
 import com.dibya.knowledgehub.security.jwt.JwtService;
