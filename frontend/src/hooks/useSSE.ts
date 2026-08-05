@@ -27,7 +27,8 @@ export function useSSE({ onToken, onComplete, onError, onConversationId }: UseSS
       let resolvedConvId: string | undefined = conversationId
 
       try {
-        const response = await fetch(`/api/v1/chat/stream?${params}`, {
+        const baseUrl = import.meta.env.VITE_API_URL ?? ''
+        const response = await fetch(`${baseUrl}/api/v1/chat/stream?${params}`, {
           headers: { Authorization: `Bearer ${token}` },
           signal: abort.signal,
         })
