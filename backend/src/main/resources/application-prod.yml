@@ -15,17 +15,6 @@ spring:
       password: ${REDIS_PASS}
       ssl:
         enabled: true
-  mail:
-    host: ${SMTP_HOST:smtp.gmail.com}
-    port: ${SMTP_PORT:587}
-    username: ${GMAIL_USERNAME:${SPRING_MAIL_USERNAME:}}
-    password: ${GMAIL_APP_PASSWORD:${SPRING_MAIL_PASSWORD:}}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
   security:
     oauth2:
       client:
@@ -69,3 +58,7 @@ app:
   storage:
     type: ${STORAGE_TYPE:local}
     location: ${STORAGE_PATH:/tmp/uploads}
+  resend:
+    api-key: ${RESEND_API_KEY:}
+    from: ${RESEND_FROM:onboarding@resend.dev}
+  frontend-url: ${FRONTEND_URL:https://knowledgehub-ai-app.netlify.app}
