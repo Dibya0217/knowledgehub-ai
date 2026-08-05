@@ -1,8 +1,6 @@
 package com.dibya.knowledgehub.document.service;
 
 import com.dibya.knowledgehub.audit.AuditService;
-import com.dibya.knowledgehub.chunk.ChunkingService;
-import com.dibya.knowledgehub.chunk.TextChunk;
 import com.dibya.knowledgehub.document.dto.DocumentResponse;
 import com.dibya.knowledgehub.document.dto.DocumentStatusResponse;
 import com.dibya.knowledgehub.document.dto.DocumentUploadResponse;
@@ -13,8 +11,6 @@ import com.dibya.knowledgehub.document.repository.DocumentMetadataRepository;
 import com.dibya.knowledgehub.document.repository.DocumentRepository;
 import com.dibya.knowledgehub.exception.ResourceNotFoundException;
 import com.dibya.knowledgehub.exception.StorageException;
-import com.dibya.knowledgehub.monitoring.KnowledgeHubMetrics;
-import com.dibya.knowledgehub.parser.ParsedDocument;
 import com.dibya.knowledgehub.parser.ParserFactory;
 import com.dibya.knowledgehub.storage.FileStorageService;
 import com.dibya.knowledgehub.user.entity.User;
@@ -22,20 +18,14 @@ import com.dibya.knowledgehub.user.repository.UserRepository;
 import com.dibya.knowledgehub.vector.VectorStoreService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -49,32 +39,26 @@ public class DocumentService {
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
     private final ParserFactory parserFactory;
-    private final ChunkingService chunkingService;
     private final VectorStoreService vectorStoreService;
     private final AuditService auditService;
-    private final KnowledgeHubMetrics metrics;
-
-    @Autowired @Lazy
-    private DocumentService self;
+    private final DocumentProcessor documentProcessor;
 
     public DocumentService(DocumentRepository documentRepository,
                            DocumentMetadataRepository metadataRepository,
                            UserRepository userRepository,
                            FileStorageService fileStorageService,
                            ParserFactory parserFactory,
-                           ChunkingService chunkingService,
                            VectorStoreService vectorStoreService,
                            AuditService auditService,
-                           KnowledgeHubMetrics metrics) {
+                           DocumentProcessor documentProcessor) {
         this.documentRepository = documentRepository;
         this.metadataRepository = metadataRepository;
         this.userRepository = userRepository;
         this.fileStorageService = fileStorageService;
         this.parserFactory = parserFactory;
-        this.chunkingService = chunkingService;
         this.vectorStoreService = vectorStoreService;
         this.auditService = auditService;
-        this.metrics = metrics;
+        this.documentProcessor = documentProcessor;
     }
 
     @Transactional
@@ -111,67 +95,10 @@ public class DocumentService {
             throw new StorageException("Failed to store file: " + file.getOriginalFilename(), e);
         }
 
-        self.processDocumentAsync(document.getId(), user.getId());
+        documentProcessor.process(document.getId(), user.getId());
 
         return new DocumentUploadResponse(
                 document.getId(), document.getFilename(), document.getStatus(), document.getCreatedAt());
-    }
-
-    @Async
-    public void processDocumentAsync(UUID documentId, UUID userId) {
-        Document document = documentRepository.findById(documentId).orElse(null);
-        if (document == null) {
-            log.error("processDocumentAsync: document not found: {}", documentId);
-            return;
-        }
-
-        log.info("Processing document: id={}, name='{}'", documentId, document.getOriginalName());
-        document.setStatus(DocumentStatus.PROCESSING);
-        documentRepository.save(document);
-
-        try {
-            Resource resource = fileStorageService.load(document.getStoragePath());
-            ParsedDocument parsed = parserFactory.select(document.getFileType())
-                    .parse(resource.getInputStream(), document.getFilename());
-            log.debug("Parsed document {}: pages={}", documentId, parsed.pageCount());
-
-            List<TextChunk> chunks = chunkingService.chunk(
-                    parsed.text(), document.getId(), document.getUser().getId(), document.getFilename());
-            log.debug("Chunked document {}: {} chunks produced", documentId, chunks.size());
-
-            try {
-                vectorStoreService.upsert(chunks);
-            } catch (Exception e) {
-                log.warn("Vector upsert failed for document {} (Qdrant unavailable?): {}", documentId, e.getMessage());
-            }
-
-            int wordCount = Arrays.stream(parsed.text().split("\\s+"))
-                    .filter(w -> !w.isBlank())
-                    .mapToInt(w -> 1)
-                    .sum();
-
-            DocumentMetadata metadata = new DocumentMetadata();
-            metadata.setDocument(document);
-            metadata.setPageCount(parsed.pageCount());
-            metadata.setWordCount(wordCount);
-            metadata.setTitle(parsed.metadata().getOrDefault("title", null));
-            metadata.setAuthor(parsed.metadata().getOrDefault("author", null));
-            metadataRepository.save(metadata);
-
-            document.setStatus(DocumentStatus.READY);
-            documentRepository.save(document);
-
-            log.info("Document READY: id={}, name='{}', chunks={}, pages={}, words={}",
-                    documentId, document.getOriginalName(), chunks.size(), parsed.pageCount(), wordCount);
-
-            metrics.incrementDocumentsUploaded();
-            auditService.log(userId, "DOCUMENT_UPLOAD", "document", documentId.toString(), null);
-
-        } catch (Exception e) {
-            log.error("Failed to process document {}: {}", documentId, e.getMessage(), e);
-            document.setStatus(DocumentStatus.FAILED);
-            documentRepository.save(document);
-        }
     }
 
     @Transactional(readOnly = true)
