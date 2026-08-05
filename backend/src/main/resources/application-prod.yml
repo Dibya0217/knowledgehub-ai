@@ -35,7 +35,7 @@ spring:
       embedding: nomic
     openai:
       api-key: ${GROQ_API_KEY:}
-      base-url: https://api.groq.com/openai
+      base-url: https://api.groq.com/openai/v1
       chat:
         options:
           model: ${GROQ_MODEL:llama-3.3-70b-versatile}
