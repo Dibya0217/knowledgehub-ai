@@ -30,6 +30,15 @@ spring:
             user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
             user-name-attribute: email
   ai:
+    model:
+      chat: openai
+      embedding: nomic
+    openai:
+      api-key: ${GROQ_API_KEY:}
+      base-url: https://api.groq.com/openai
+      chat:
+        options:
+          model: ${GROQ_MODEL:llama-3.3-70b-versatile}
     vectorstore:
       qdrant:
         use-tls: true
@@ -53,8 +62,11 @@ app:
   cors:
     allowed-origins: ${CORS_ORIGINS}
   ai:
-    provider: openai
-    embedding-provider: openai
+    provider: groq
+    embedding-provider: nomic
+    nomic:
+      api-key: ${NOMIC_API_KEY:}
+      model: ${NOMIC_MODEL:nomic-embed-text-v1.5}
   storage:
     type: ${STORAGE_TYPE:local}
     location: ${STORAGE_PATH:/tmp/uploads}
