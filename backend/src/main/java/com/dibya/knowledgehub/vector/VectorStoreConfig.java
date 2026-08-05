@@ -28,12 +28,17 @@ public class VectorStoreConfig {
     @Value("${spring.ai.vectorstore.qdrant.initialize-schema:true}")
     private boolean initializeSchema;
 
+    @Value("${spring.ai.vectorstore.qdrant.api-key:}")
+    private String apiKey;
+
     @Bean(destroyMethod = "close")
     @Lazy
     public QdrantClient qdrantClient() {
-        return new QdrantClient(
-                QdrantGrpcClient.newBuilder(host, port, useTls).build()
-        );
+        var builder = QdrantGrpcClient.newBuilder(host, port, useTls);
+        if (apiKey != null && !apiKey.isBlank()) {
+            builder.withApiKey(apiKey);
+        }
+        return new QdrantClient(builder.build());
     }
 
     @Bean
