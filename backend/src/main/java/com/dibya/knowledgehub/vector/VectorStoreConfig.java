@@ -2,6 +2,9 @@ package com.dibya.knowledgehub.vector;
 
 import io.qdrant.client.QdrantClient;
 import io.qdrant.client.QdrantGrpcClient;
+import io.qdrant.client.grpc.Collections.PayloadSchemaType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.qdrant.QdrantVectorStore;
@@ -12,6 +15,8 @@ import org.springframework.context.annotation.Lazy;
 
 @Configuration
 public class VectorStoreConfig {
+
+    private static final Logger log = LoggerFactory.getLogger(VectorStoreConfig.class);
 
     @Value("${spring.ai.vectorstore.qdrant.host:localhost}")
     private String host;
@@ -44,9 +49,16 @@ public class VectorStoreConfig {
     @Bean
     @Lazy
     public VectorStore vectorStore(QdrantClient qdrantClient, EmbeddingModel embeddingModel) {
-        return QdrantVectorStore.builder(qdrantClient, embeddingModel)
+        var store = QdrantVectorStore.builder(qdrantClient, embeddingModel)
                 .collectionName(collectionName)
                 .initializeSchema(initializeSchema)
                 .build();
+        try {
+            qdrantClient.createPayloadIndexAsync(collectionName, "userId", PayloadSchemaType.Keyword, null, null, null).get();
+            log.info("Qdrant payload index created for 'userId'");
+        } catch (Exception e) {
+            log.debug("Qdrant userId index already exists or skipped: {}", e.getMessage());
+        }
+        return store;
     }
 }
