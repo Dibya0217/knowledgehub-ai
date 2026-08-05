@@ -54,7 +54,7 @@ public class VectorStoreConfig {
                 .initializeSchema(initializeSchema)
                 .build();
         try {
-            qdrantClient.createPayloadIndexAsync(collectionName, "userId", PayloadSchemaType.Keyword, null, null, null).get();
+            qdrantClient.createPayloadIndexAsync(collectionName, "userId", PayloadSchemaType.Keyword, null, null, null, null).get();
             log.info("Qdrant payload index created for 'userId'");
         } catch (Exception e) {
             log.debug("Qdrant userId index already exists or skipped: {}", e.getMessage());
