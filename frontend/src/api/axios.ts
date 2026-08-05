@@ -74,4 +74,31 @@ api.interceptors.response.use(
   },
 )
 
+export async function getValidToken(): Promise<string | null> {
+  const { accessToken, refreshToken } = useAuthStore.getState()
+  if (!accessToken) return null
+
+  try {
+    const payload = JSON.parse(atob(accessToken.split('.')[1]))
+    if (Date.now() < payload.exp * 1000) return accessToken
+  } catch {
+    return accessToken
+  }
+
+  if (!refreshToken) {
+    useAuthStore.getState().logout()
+    return null
+  }
+
+  try {
+    const response = await axios.post(`${BASE}/api/v1/auth/refresh`, { refreshToken })
+    const { accessToken: newToken } = response.data.data
+    useAuthStore.getState().setTokens(newToken, refreshToken)
+    return newToken
+  } catch {
+    useAuthStore.getState().logout()
+    return null
+  }
+}
+
 export default api

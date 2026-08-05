@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
-import { useAuthStore } from '@/store/authStore'
+import { getValidToken } from '@/api/axios'
 
 interface UseSSEOptions {
   onToken: (token: string) => void
@@ -20,7 +20,7 @@ export function useSSE({ onToken, onComplete, onError, onConversationId }: UseSS
 
       setIsStreaming(true)
 
-      const token = useAuthStore.getState().accessToken
+      const token = await getValidToken()
       const params = new URLSearchParams({ question })
       if (conversationId) params.set('conversationId', conversationId)
 
