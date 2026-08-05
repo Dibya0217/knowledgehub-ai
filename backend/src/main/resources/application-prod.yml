@@ -65,8 +65,8 @@ app:
     provider: groq
     embedding-provider: nomic
     nomic:
-      api-key: ${NOMIC_API_KEY:}
-      model: ${NOMIC_MODEL:nomic-embed-text-v1.5}
+      api-key: ${JINA_API_KEY:}
+      model: ${JINA_MODEL:jina-embeddings-v3}
   storage:
     type: ${STORAGE_TYPE:local}
     location: ${STORAGE_PATH:/tmp/uploads}

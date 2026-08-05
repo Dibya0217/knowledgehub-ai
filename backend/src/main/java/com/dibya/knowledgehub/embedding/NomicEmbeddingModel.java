@@ -24,14 +24,14 @@ import java.util.Map;
 public class NomicEmbeddingModel implements EmbeddingModel {
 
     private static final Logger log = LoggerFactory.getLogger(NomicEmbeddingModel.class);
-    private static final String NOMIC_URL = "https://api-atlas.nomic.ai/v1/embeddings";
+    private static final String JINA_URL = "https://api.jina.ai/v1/embeddings";
 
     private final RestClient restClient;
 
     @Value("${app.ai.nomic.api-key:}")
     private String apiKey;
 
-    @Value("${app.ai.nomic.model:nomic-embed-text-v1.5}")
+    @Value("${app.ai.nomic.model:jina-embeddings-v3}")
     private String model;
 
     public NomicEmbeddingModel(RestClient.Builder builder) {
@@ -41,21 +41,21 @@ public class NomicEmbeddingModel implements EmbeddingModel {
     @Override
     public EmbeddingResponse call(EmbeddingRequest request) {
         List<String> texts = request.getInstructions();
-        log.debug("Nomic embedding: {} texts", texts.size());
+        log.debug("Jina embedding: {} texts", texts.size());
 
         var body = Map.of("model", model, "input", texts);
 
-        NomicResponse response = restClient.post()
-                .uri(NOMIC_URL)
+        JinaResponse response = restClient.post()
+                .uri(JINA_URL)
                 .header("Authorization", "Bearer " + apiKey)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(body)
                 .retrieve()
-                .body(NomicResponse.class);
+                .body(JinaResponse.class);
 
         List<Embedding> embeddings = new ArrayList<>();
         if (response != null && response.data() != null) {
-            for (NomicEmbeddingData item : response.data()) {
+            for (JinaEmbeddingData item : response.data()) {
                 float[] floats = toFloatArray(item.embedding());
                 embeddings.add(new Embedding(floats, item.index()));
             }
@@ -76,6 +76,6 @@ public class NomicEmbeddingModel implements EmbeddingModel {
         return result;
     }
 
-    record NomicResponse(List<NomicEmbeddingData> data) {}
-    record NomicEmbeddingData(List<Double> embedding, Integer index) {}
+    record JinaResponse(List<JinaEmbeddingData> data) {}
+    record JinaEmbeddingData(List<Double> embedding, Integer index) {}
 }
