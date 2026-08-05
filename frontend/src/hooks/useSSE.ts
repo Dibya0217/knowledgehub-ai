@@ -3,7 +3,7 @@ import { useAuthStore } from '@/store/authStore'
 
 interface UseSSEOptions {
   onToken: (token: string) => void
-  onComplete: () => void
+  onComplete: (conversationId?: string) => void
   onError: (err: string) => void
   onConversationId?: (id: string) => void
 }
@@ -23,6 +23,8 @@ export function useSSE({ onToken, onComplete, onError, onConversationId }: UseSS
       const token = useAuthStore.getState().accessToken
       const params = new URLSearchParams({ question })
       if (conversationId) params.set('conversationId', conversationId)
+
+      let resolvedConvId: string | undefined = conversationId
 
       try {
         const response = await fetch(`/api/v1/chat/stream?${params}`, {
@@ -51,6 +53,7 @@ export function useSSE({ onToken, onComplete, onError, onConversationId }: UseSS
               // Final event carrying conversationId — intercept, don't render
               if (data.startsWith('[CONV:') && data.endsWith(']')) {
                 const convId = data.slice(6, -1)
+                resolvedConvId = convId
                 onConversationId?.(convId)
                 continue
               }
@@ -60,10 +63,10 @@ export function useSSE({ onToken, onComplete, onError, onConversationId }: UseSS
           }
         }
 
-        onComplete()
+        onComplete(resolvedConvId)
       } catch (err) {
         if ((err as Error).name === 'AbortError') {
-          onComplete()
+          onComplete(resolvedConvId)
         } else {
           onError((err as Error).message)
         }

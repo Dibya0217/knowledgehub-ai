@@ -139,7 +139,11 @@ public class DocumentService {
                     parsed.text(), document.getId(), document.getUser().getId(), document.getFilename());
             log.debug("Chunked document {}: {} chunks produced", documentId, chunks.size());
 
-            vectorStoreService.upsert(chunks);
+            try {
+                vectorStoreService.upsert(chunks);
+            } catch (Exception e) {
+                log.warn("Vector upsert failed for document {} (Qdrant unavailable?): {}", documentId, e.getMessage());
+            }
 
             int wordCount = Arrays.stream(parsed.text().split("\\s+"))
                     .filter(w -> !w.isBlank())
@@ -215,7 +219,11 @@ public class DocumentService {
             log.warn("Could not delete file for document {}: {}", id, e.getMessage());
         }
 
-        vectorStoreService.deleteByDocumentId(id);
+        try {
+            vectorStoreService.deleteByDocumentId(id);
+        } catch (Exception e) {
+            log.warn("Could not delete vectors for document {} (Qdrant unavailable?): {}", id, e.getMessage());
+        }
         documentRepository.delete(document);
 
         log.info("Document deleted: id={}, name='{}', user={}", id, document.getOriginalName(), email);

@@ -58,16 +58,16 @@ export function ChatPage() {
 
   const onConversationId = useCallback((id: string) => {
     setActiveConversationId(id)
-    setIsStreaming(false)
-    setStreamingContent('')
     qc.invalidateQueries({ queryKey: ['conversations'] })
-    qc.invalidateQueries({ queryKey: ['messages', id] })
   }, [qc])
 
-  const onComplete = useCallback(() => {
+  const onComplete = useCallback((conversationId?: string) => {
     setIsStreaming(false)
     setStreamingContent('')
-  }, [])
+    if (conversationId) {
+      qc.invalidateQueries({ queryKey: ['messages', conversationId] })
+    }
+  }, [qc])
 
   const onError = useCallback((err: string) => {
     setIsStreaming(false)
